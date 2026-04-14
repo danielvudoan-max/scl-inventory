@@ -356,26 +356,45 @@ for(var _i=0;_i<PRODUCTS.length;_i++){
   if(!idx[_k])idx[_k]=[];
   idx[_k].push(_p);
 }
+function normalizeGrade(s){
+  // Convert grades both ways: 1540<->15W40, 8090<->80W90, etc.
+  // Remove W: 15W40->1540, 80W90->8090, 5W30->530, 0W20->020
+  s=s.replace(/(\d+)W(\d+)/g,function(m,a,b){return a+b;});
+  // Also store with W: 1540->15W40 done via expand below
+  return s;
+}
+function expandGrades(s){
+  // Add W back: 1540->15W40, 8090->80W90, 530->5W30, 020->0W20
+  // Pattern: 2-4 digits where first part is viscosity (0,5,10,15,20,25,30,40,50,60,75,80,85)
+  return s.replace(/\b(0|5|10|15|20|25|30|40|50|60|75|80|85)(\d{2})\b/g,function(m,a,b){return a+'W'+b;});
+}
 function findProds(q){
   q=q.trim().toUpperCase(); if(!q)return[];
-  // Normalize: remove spaces for voice dictation ("20 W 50" -> "20W50")
-  var qn=q.replace(/\s+/g,'');
   // Exact product code match
   if(idx[q])return idx[q];
-  // Product code starts-with match
+  // Product code starts-with
   var keys=Object.keys(idx).filter(function(k){return k.indexOf(q)===0;});
   if(keys.length===1)return idx[keys[0]];
   if(keys.length>1)return keys.reduce(function(a,k){return a.concat(idx[k]);},[]);
-  // Normalized product code match (spaces stripped)
-  if(qn!==q){
-    var nkeys=Object.keys(idx).filter(function(k){return k.replace(/\s+/g,'').indexOf(qn)===0;});
-    if(nkeys.length)return nkeys.reduce(function(a,k){return a.concat(idx[k]);},[]);
-  }
-  // Description search — match with and without spaces
-  if(q.length>=3){
+  // Multi-word AND search with grade normalization
+  if(q.length>=2){
+    // Build normalized versions of query
+    var qNoW=normalizeGrade(q);        // remove W: "15W40"->"1540"
+    var qWithW=expandGrades(qNoW);     // add W back: "1540"->"15W40"
+    // Split into words, filter short ones
+    var words=q.replace(/\s+/g,' ').split(' ').filter(function(w){return w.length>=2;});
+    var wordsNoW=qNoW.replace(/\s+/g,' ').split(' ').filter(function(w){return w.length>=2;});
+    var wordsWithW=qWithW.replace(/\s+/g,' ').split(' ').filter(function(w){return w.length>=2;});
     var descMatches=PRODUCTS.filter(function(p){
       var d=p.DESCRIPTION.toUpperCase();
-      return d.indexOf(q)>=0 || d.replace(/\s+/g,'').indexOf(qn)>=0;
+      var dNoW=normalizeGrade(d);
+      var dWithW=expandGrades(dNoW);
+      var pc=p.PRODUCT.toUpperCase();
+      // Check all word sets — all words must match somewhere in description or product code
+      function allMatch(ws,target1,target2){
+        return ws.every(function(w){return target1.indexOf(w)>=0||target2.indexOf(w)>=0;});
+      }
+      return allMatch(words,d,pc)||allMatch(wordsNoW,dNoW,pc)||allMatch(wordsWithW,dWithW,pc);
     });
     if(descMatches.length)return descMatches;
   }
