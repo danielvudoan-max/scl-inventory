@@ -796,6 +796,118 @@ function showCamDenied(){
   document.getElementById('camDenied').style.display='flex';
 }
 
+// ── AI PHOTO SCAN ─────────────────────────────────────────────────────
+var CLAUDE_API_KEY='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';
+var photoStream=null;
+function togglePhotoScan(){
+  if(photoStream){closePhotoScan();return;}
+  var btn=document.getElementById('aibtn');
+  btn.style.opacity='.6';
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    toast('Camera not available','e'); btn.style.opacity='1'; return;
+  }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}})
+  .then(function(stream){
+    photoStream=stream;
+    var vid=document.getElementById('photoVid');
+    vid.srcObject=stream;
+    document.getElementById('photoView').style.display='block';
+    document.getElementById('aiResult').style.display='none';
+    btn.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Close AI Scan';
+    btn.style.opacity='1';
+    vid.play().catch(function(){});
+    toast('Point at label then tap Snap');
+  }).catch(function(e){
+    photoStream=null; btn.style.opacity='1';
+    if(e.name==='NotAllowedError'){showCamDenied();}
+    else{toast('Camera error: '+e.name,'e');}
+  });
+}
+function closePhotoScan(){
+  if(photoStream){photoStream.getTracks().forEach(function(t){t.stop();});photoStream=null;}
+  document.getElementById('photoView').style.display='none';
+  var btn=document.getElementById('aibtn');
+  btn.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> AI Label Scan';
+  btn.style.opacity='1';
+}
+function snapAndIdentify(){
+  var vid=document.getElementById('photoVid');
+  var canvas=document.getElementById('photoCanvas');
+  canvas.width=vid.videoWidth||640; canvas.height=vid.videoHeight||480;
+  var ctx=canvas.getContext('2d');
+  ctx.drawImage(vid,0,0);
+  var base64=canvas.toDataURL('image/jpeg',0.8).split(',')[1];
+  closePhotoScan();
+  // Show thinking state
+  var res=document.getElementById('aiResult');
+  res.style.display='block';
+  document.getElementById('airReasoning').innerHTML='<span class="thinking-dots">Identifying product</span>';
+  document.getElementById('airMatches').innerHTML='';
+  document.getElementById('airNone').style.display='none';
+  // Build product list summary for context (first 200 products to keep prompt small)
+  var prodSample=PRODUCTS.slice(0,200).map(function(p){return p.PRODUCT+(p.PAK?'/'+p.PAK:'')+': '+p.DESCRIPTION;}).join('\n');
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':CLAUDE_API_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:500,
+      messages:[{
+        role:'user',
+        content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
+          {type:'text',text:'This is a photo of a lubricant/oil product label in a warehouse. Read any text visible on the label — product name, grade, viscosity, brand. Then match it to the best product(s) from this list:\n\n'+prodSample+'\n\nRespond with JSON only, no markdown:\n{"reasoning":"what you see on the label","matches":[{"product":"PRODUCT_CODE","pak":"PAK_CODE","confidence":"high/medium/low"}]}\n\nReturn up to 4 best matches ordered by confidence. If nothing matches return matches:[]'}
+        ]
+      }]
+    })
+  }).then(function(r){return r.json();}).then(function(data){
+    var text='';
+    if(data.content&&data.content[0]&&data.content[0].text){
+      text=data.content[0].text;
+    } else if(data.error){
+      throw new Error(data.error.message||'API error');
+    }
+    // Parse JSON response
+    var clean=text.replace(/```json|```/g,'').trim();
+    var parsed=JSON.parse(clean);
+    document.getElementById('airReasoning').textContent=parsed.reasoning||'';
+    var matches=parsed.matches||[];
+    if(!matches.length){
+      document.getElementById('airNone').style.display='block';
+      return;
+    }
+    var matchDiv=document.getElementById('airMatches');
+    matchDiv.innerHTML='';
+    matches.forEach(function(m){
+      // Find the product in our list
+      var prods=PRODUCTS.filter(function(p){return p.PRODUCT===m.product&&(p.PAK===m.pak||!m.pak);});
+      if(!prods.length) prods=PRODUCTS.filter(function(p){return p.PRODUCT===m.product;});
+      if(!prods.length) return;
+      var p=prods[0];
+      var btn=document.createElement('button');
+      btn.className='air-match';
+      btn.innerHTML='<div class="air-prod">'+p.PRODUCT+'</div>'
+        +'<div class="air-pak">PAK: '+(p.PAK||'—')+' | BIN: '+p.BIN_LOC+'</div>'
+        +'<div class="air-desc">'+p.DESCRIPTION+'</div>'
+        +'<div class="air-conf">'+m.confidence+' confidence</div>';
+      btn.onclick=function(){
+        document.getElementById('aiResult').style.display='none';
+        showMatch(p);
+      };
+      matchDiv.appendChild(btn);
+    });
+  }).catch(function(e){
+    document.getElementById('airReasoning').textContent='Error: '+e.message;
+    document.getElementById('airNone').style.display='block';
+    toast('AI scan failed — try again','e');
+  });
+}
+
 // ── SUBMIT COUNT ──────────────────────────────────────────────────────
 var step1Done=false;
 function openSubmit(){
