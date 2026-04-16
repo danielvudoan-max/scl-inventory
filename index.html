@@ -845,7 +845,7 @@ function snapAndIdentify(){
   document.getElementById('airMatches').innerHTML='';
   document.getElementById('airNone').style.display='none';
   // Build product list summary for context (first 200 products to keep prompt small)
-  var prodSample=PRODUCTS.slice(0,200).map(function(p){return p.PRODUCT+(p.PAK?'/'+p.PAK:'')+': '+p.DESCRIPTION;}).join('\n');
+  var prodSample=PRODUCTS.map(function(p){return p.PRODUCT+(p.PAK?'/'+p.PAK:'')+': '+p.DESCRIPTION;}).join('\n');
   fetch(PROXY_URL,{
     method:'POST',
     headers:{
