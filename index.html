@@ -797,7 +797,7 @@ function showCamDenied(){
 }
 
 // ── AI PHOTO SCAN ─────────────────────────────────────────────────────
-var CLAUDE_API_KEY='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';
+var PROXY_URL='https://scl-api-proxy.danielvudoan.workers.dev';
 var photoStream=null;
 function togglePhotoScan(){
   if(photoStream){closePhotoScan();return;}
@@ -846,13 +846,10 @@ function snapAndIdentify(){
   document.getElementById('airNone').style.display='none';
   // Build product list summary for context (first 200 products to keep prompt small)
   var prodSample=PRODUCTS.slice(0,200).map(function(p){return p.PRODUCT+(p.PAK?'/'+p.PAK:'')+': '+p.DESCRIPTION;}).join('\n');
-  fetch('https://api.anthropic.com/v1/messages',{
+  fetch(PROXY_URL,{
     method:'POST',
     headers:{
-      'Content-Type':'application/json',
-      'x-api-key':CLAUDE_API_KEY,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
+      'Content-Type':'application/json'
     },
     body:JSON.stringify({
       model:'claude-sonnet-4-20250514',
