@@ -872,6 +872,17 @@ function snapAndIdentify(){
     var parsed=JSON.parse(clean);
     document.getElementById('airReasoning').textContent=parsed.reasoning||'';
     var searchStr=parsed.search||'';
+    // Fallback: if no search string returned, extract key terms from reasoning
+    if(!searchStr&&parsed.reasoning){
+      var r=parsed.reasoning.toUpperCase();
+      // Extract viscosity grade
+      var gradeMatch=r.match(/(\d+W[-]?\d+)/);
+      var grade=gradeMatch?gradeMatch[1].replace('-',''):'';
+      // Extract product line keywords
+      var lineKeys=['XLE','SNG','SB','T6','T4','T5','ESP','AFE','EURO','DELVAC','ROTELLA','DELO','HAVOLINE','GUARDOL','SHIELD','MEGAFLOW','VERSATRANS','SPIRAX','TELLUS','OMALA','GADUS','PENNZOIL','MOBIL','SHELL','CHEVRON','KENDALL','CASTROL','LUCAS'];
+      var foundKeys=lineKeys.filter(function(k){return r.indexOf(k)>=0;});
+      searchStr=foundKeys.slice(0,3).join(' ')+(grade?' '+grade:'');
+    }
     // Try full search string first
     var matches=findProds(searchStr);
     // If too few results, try without first word (drop brand, keep product+grade)
