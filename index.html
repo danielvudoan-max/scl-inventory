@@ -845,7 +845,6 @@ function snapAndIdentify(){
   document.getElementById('airMatches').innerHTML='';
   document.getElementById('airNone').style.display='none';
   // Build product list summary for context (first 200 products to keep prompt small)
-  var prodSample=PRODUCTS.map(function(p){return p.PRODUCT+(p.PAK?'/'+p.PAK:'')+': '+p.DESCRIPTION;}).join('\n');
   fetch(PROXY_URL,{
     method:'POST',
     headers:{
@@ -858,7 +857,7 @@ function snapAndIdentify(){
         role:'user',
         content:[
           {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
-          {type:'text',text:'This is a photo of a lubricant/oil product label in a warehouse. Read any text visible on the label — product name, grade, viscosity, brand. Then match it to the best product(s) from this list:\n\n'+prodSample+'\n\nRespond with JSON only, no markdown:\n{"reasoning":"what you see on the label","matches":[{"product":"PRODUCT_CODE","pak":"PAK_CODE","confidence":"high/medium/low"}]}\n\nReturn up to 4 best matches ordered by confidence. If nothing matches return matches:[]'}
+          {type:'text',text:'This is a photo of a lubricant/oil product label in a warehouse. Read all text visible on the label. Respond with JSON only, no markdown:\n{"reasoning":"describe what you see","brand":"brand name","product":"product name","grade":"viscosity grade e.g. 15W40","keywords":["key","search","terms","from","label"]}\n\nExtract as many specific terms as possible from the label into keywords (brand, product line, grade, type).'}
         ]
       }]
     })
@@ -869,29 +868,54 @@ function snapAndIdentify(){
     } else if(data.error){
       throw new Error(data.error.message||'API error');
     }
-    // Parse JSON response
     var clean=text.replace(/```json|```/g,'').trim();
     var parsed=JSON.parse(clean);
     document.getElementById('airReasoning').textContent=parsed.reasoning||'';
-    var matches=parsed.matches||[];
+    // Build search query from what Claude read on the label
+    var searchTerms=[];
+    if(parsed.brand) searchTerms.push(parsed.brand);
+    if(parsed.product) searchTerms.push(parsed.product);
+    if(parsed.grade) searchTerms.push(parsed.grade);
+    if(parsed.keywords&&parsed.keywords.length) searchTerms=searchTerms.concat(parsed.keywords);
+    // Try progressively broader searches until we get results
+    var matches=[];
+    // First try: all terms together
+    var fullQuery=searchTerms.join(' ');
+    matches=findProds(fullQuery);
+    // If no results, try brand + grade
+    if(!matches.length&&parsed.brand&&parsed.grade){
+      matches=findProds(parsed.brand+' '+parsed.grade);
+    }
+    // If still no results, try just the grade
+    if(!matches.length&&parsed.grade){
+      matches=findProds(parsed.grade);
+    }
+    // If still no results, try each keyword individually and combine
+    if(!matches.length&&parsed.keywords){
+      parsed.keywords.forEach(function(kw){
+        if(kw.length>=3){
+          var r=findProds(kw);
+          r.forEach(function(p){
+            var k=p.PRODUCT+'|'+p.PAK;
+            if(!matches.find(function(m){return m.PRODUCT===p.PRODUCT&&m.PAK===p.PAK;})) matches.push(p);
+          });
+        }
+      });
+    }
+    // Limit to 6 results
+    matches=matches.slice(0,6);
+    var matchDiv=document.getElementById('airMatches');
+    matchDiv.innerHTML='';
     if(!matches.length){
       document.getElementById('airNone').style.display='block';
       return;
     }
-    var matchDiv=document.getElementById('airMatches');
-    matchDiv.innerHTML='';
-    matches.forEach(function(m){
-      // Find the product in our list
-      var prods=PRODUCTS.filter(function(p){return p.PRODUCT===m.product&&(p.PAK===m.pak||!m.pak);});
-      if(!prods.length) prods=PRODUCTS.filter(function(p){return p.PRODUCT===m.product;});
-      if(!prods.length) return;
-      var p=prods[0];
+    matches.forEach(function(p){
       var btn=document.createElement('button');
       btn.className='air-match';
       btn.innerHTML='<div class="air-prod">'+p.PRODUCT+'</div>'
         +'<div class="air-pak">PAK: '+(p.PAK||'—')+' | BIN: '+p.BIN_LOC+'</div>'
-        +'<div class="air-desc">'+p.DESCRIPTION+'</div>'
-        +'<div class="air-conf">'+m.confidence+' confidence</div>';
+        +'<div class="air-desc">'+p.DESCRIPTION+'</div>';
       btn.onclick=function(){
         document.getElementById('aiResult').style.display='none';
         showMatch(p);
