@@ -133,10 +133,10 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 /* AI PHOTO SCAN */
 .aibtn{width:100%;background:linear-gradient(135deg,#1a1f35,#1c2030);border:1px solid var(--acc2);border-radius:10px;padding:12px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;gap:8px;color:var(--acc2);font-family:var(--sans);font-weight:600;font-size:14px;cursor:pointer;margin-bottom:10px;-webkit-appearance:none;touch-action:manipulation}
 #photoView{display:none;position:relative;margin-bottom:10px;border-radius:12px;overflow:hidden;background:#000}
-#photoVid{width:100%;display:block;max-height:260px;object-fit:cover}
+#photoVid{width:100%;display:block;max-height:420px;object-fit:cover}
 #photoCanvas{display:none}
 .photo-over{position:absolute;top:0;left:0;right:0;bottom:0;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;pointer-events:none}
-.photo-ret{width:220px;height:160px;border:2px solid var(--acc2);border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)}
+.photo-ret{width:90%;height:75%;border:2px solid var(--acc2);border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,.2)}
 .photo-lbl{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,.8);font-family:var(--mono)}
 .photo-x{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);border-radius:50%;width:36px;height:36px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;cursor:pointer;color:#fff;font-size:18px;touch-action:manipulation}
 .snap-btn{position:absolute;bottom:14px;left:50%;-webkit-transform:translateX(-50%);transform:translateX(-50%);background:var(--acc2);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-family:var(--sans);font-weight:700;font-size:14px;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;white-space:nowrap}
@@ -857,7 +857,7 @@ function snapAndIdentify(){
         role:'user',
         content:[
           {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
-          {type:'text',text:'This is a photo of a lubricant/oil product label in a warehouse. Read all text visible on the label. Respond with JSON only, no markdown:\n{"reasoning":"describe what you see","brand":"brand name","product":"product name","grade":"viscosity grade e.g. 15W40","keywords":["key","search","terms","from","label"]}\n\nExtract as many specific terms as possible from the label into keywords (brand, product line, grade, type).'}
+          {type:'text',text:'This is a photo of a lubricant/oil product label in a warehouse. Read all visible text on the label. Respond with JSON only, no markdown:\n{"reasoning":"what you see on the label","search":"a short 2-4 word search string using the most identifying terms from the label e.g. brand + product line + viscosity grade"}\n\nExamples: "Delo XLE 15W40", "Rotella T6 5W40", "Mobil 1 5W30", "Shell Tellus 46"'}
         ]
       }]
     })
@@ -871,39 +871,17 @@ function snapAndIdentify(){
     var clean=text.replace(/```json|```/g,'').trim();
     var parsed=JSON.parse(clean);
     document.getElementById('airReasoning').textContent=parsed.reasoning||'';
-    // Build search query from what Claude read on the label
-    var searchTerms=[];
-    if(parsed.brand) searchTerms.push(parsed.brand);
-    if(parsed.product) searchTerms.push(parsed.product);
-    if(parsed.grade) searchTerms.push(parsed.grade);
-    if(parsed.keywords&&parsed.keywords.length) searchTerms=searchTerms.concat(parsed.keywords);
-    // Try progressively broader searches until we get results
-    var matches=[];
-    // First try: all terms together
-    var fullQuery=searchTerms.join(' ');
-    matches=findProds(fullQuery);
-    // If no results, try brand + grade
-    if(!matches.length&&parsed.brand&&parsed.grade){
-      matches=findProds(parsed.brand+' '+parsed.grade);
+    var searchStr=parsed.search||'';
+    // Try full search string first
+    var matches=findProds(searchStr);
+    // If too few results, try without first word (drop brand, keep product+grade)
+    if(matches.length<3&&searchStr.indexOf(' ')>=0){
+      var shorter=searchStr.substring(searchStr.indexOf(' ')+1);
+      var m2=findProds(shorter);
+      if(m2.length>matches.length) matches=m2;
     }
-    // If still no results, try just the grade
-    if(!matches.length&&parsed.grade){
-      matches=findProds(parsed.grade);
-    }
-    // If still no results, try each keyword individually and combine
-    if(!matches.length&&parsed.keywords){
-      parsed.keywords.forEach(function(kw){
-        if(kw.length>=3){
-          var r=findProds(kw);
-          r.forEach(function(p){
-            var k=p.PRODUCT+'|'+p.PAK;
-            if(!matches.find(function(m){return m.PRODUCT===p.PRODUCT&&m.PAK===p.PAK;})) matches.push(p);
-          });
-        }
-      });
-    }
-    // Limit to 6 results
-    matches=matches.slice(0,6);
+    // Limit to 15
+    matches=matches.slice(0,15);
     var matchDiv=document.getElementById('airMatches');
     matchDiv.innerHTML='';
     if(!matches.length){
