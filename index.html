@@ -351,54 +351,93 @@ function _storeOp(op,k,v){
 
 // ── PRODUCT INDEX ─────────────────────────────────────────────────────
 var idx={};
+var vendorIdx={};  // vendor code prefix -> products
 for(var _i=0;_i<PRODUCTS.length;_i++){
-  var _p=PRODUCTS[_i], _k=_p.PRODUCT.toUpperCase();
+  var _p=PRODUCTS[_i];
+  // Product code index
+  var _k=_p.PRODUCT.toUpperCase();
   if(!idx[_k])idx[_k]=[];
   idx[_k].push(_p);
+  // Vendor code index (first 6 chars, digits only)
+  if(_p.VPROD_CODE){
+    var _vc=_p.VPROD_CODE.replace(/[^a-zA-Z0-9]/g,'').toUpperCase().substring(0,6);
+    if(_vc.length>=4){
+      if(!vendorIdx[_vc])vendorIdx[_vc]=[];
+      vendorIdx[_vc].push(_p);
+    }
+  }
 }
+
+// PAK groupings for filter
+var PAK_GROUPS={
+  'Drum':['55D','55N','54D','54N','52D','41D','40D','37D','BK','BKP'],
+  'Pail':['5P','35P','30P','33P','38P','47P'],
+  'Case':['12Q','6Q','3J','12L','10T','40T','1.1','4.1','120','6G','4J','24E','12E','6E','6J','24B','12T','10E','35Q','2J','4E','1QR','1C','12B','6Q','40N']
+};
+
 function normalizeGrade(s){
-  // Convert grades both ways: 1540<->15W40, 8090<->80W90, etc.
-  // Remove W: 15W40->1540, 80W90->8090, 5W30->530, 0W20->020
-  s=s.replace(/(\d+)W(\d+)/g,function(m,a,b){return a+b;});
-  // Also store with W: 1540->15W40 done via expand below
+  s=s.replace(/(\d+)W[-]?(\d+)/g,function(m,a,b){return a+b;});
   return s;
 }
 function expandGrades(s){
-  // Add W back: 1540->15W40, 8090->80W90, 530->5W30, 020->0W20
-  // Pattern: 2-4 digits where first part is viscosity (0,5,10,15,20,25,30,40,50,60,75,80,85)
   return s.replace(/\b(0|5|10|15|20|25|30|40|50|60|75|80|85)(\d{2})\b/g,function(m,a,b){return a+'W'+b;});
 }
 function findProds(q){
   q=q.trim().toUpperCase(); if(!q)return[];
-  // Exact product code match
   if(idx[q])return idx[q];
-  // Product code starts-with
   var keys=Object.keys(idx).filter(function(k){return k.indexOf(q)===0;});
   if(keys.length===1)return idx[keys[0]];
   if(keys.length>1)return keys.reduce(function(a,k){return a.concat(idx[k]);},[]);
-  // Multi-word AND search with grade normalization
+  var qn=normalizeGrade(q);
+  var qw=expandGrades(qn);
   if(q.length>=2){
-    // Build normalized versions of query
-    var qNoW=normalizeGrade(q);        // remove W: "15W40"->"1540"
-    var qWithW=expandGrades(qNoW);     // add W back: "1540"->"15W40"
-    // Split into words, filter short ones
-    var words=q.replace(/\s+/g,' ').split(' ').filter(function(w){return w.length>=2;});
-    var wordsNoW=qNoW.replace(/\s+/g,' ').split(' ').filter(function(w){return w.length>=2;});
-    var wordsWithW=qWithW.replace(/\s+/g,' ').split(' ').filter(function(w){return w.length>=2;});
+    var words=q.split(' ').filter(function(w){return w.length>=2;});
+    var wordsN=qn.split(' ').filter(function(w){return w.length>=2;});
+    var wordsW=qw.split(' ').filter(function(w){return w.length>=2;});
     var descMatches=PRODUCTS.filter(function(p){
       var d=p.DESCRIPTION.toUpperCase();
-      var dNoW=normalizeGrade(d);
-      var dWithW=expandGrades(dNoW);
+      var dn=normalizeGrade(d);
+      var dw=expandGrades(dn);
       var pc=p.PRODUCT.toUpperCase();
-      // Check all word sets — all words must match somewhere in description or product code
-      function allMatch(ws,target1,target2){
-        return ws.every(function(w){return target1.indexOf(w)>=0||target2.indexOf(w)>=0;});
-      }
-      return allMatch(words,d,pc)||allMatch(wordsNoW,dNoW,pc)||allMatch(wordsWithW,dWithW,pc);
+      function allMatch(ws,t1,t2){return ws.every(function(w){return t1.indexOf(w)>=0||t2.indexOf(w)>=0;});}
+      return allMatch(words,d,pc)||allMatch(wordsN,dn,pc)||allMatch(wordsW,dw,pc);
     });
     if(descMatches.length)return descMatches;
   }
   return[];
+}
+function findByVendorCode(vc){
+  if(!vc) return [];
+  var clean=vc.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+  // Try progressively shorter prefixes (6, 5, 4 chars)
+  for(var len=Math.min(6,clean.length);len>=4;len--){
+    var prefix=clean.substring(0,len);
+    if(vendorIdx[prefix]) return vendorIdx[prefix];
+  }
+  return [];
+}
+function aiSearch(parsed){
+  var results=[];
+  function addUnique(arr){
+    arr.forEach(function(p){
+      if(!results.find(function(r){return r.PRODUCT===p.PRODUCT&&r.PAK===p.PAK;}))results.push(p);
+    });
+  }
+  // 1. Vendor code match
+  if(parsed.vendor_code) addUnique(findByVendorCode(parsed.vendor_code));
+  // 2. Full search string
+  if(parsed.search) addUnique(findProds(parsed.search));
+  // 3. Product line + grade
+  if(parsed.product_line&&parsed.grade) addUnique(findProds(parsed.product_line+' '+parsed.grade));
+  // 4. Product line alone
+  if(parsed.product_line&&results.length<5) addUnique(findProds(parsed.product_line));
+  // 5. Brand + grade
+  if(parsed.brand&&parsed.grade&&results.length<5) addUnique(findProds(parsed.brand+' '+parsed.grade));
+  // 6. Brand alone (last resort)
+  if(parsed.brand&&results.length<3) addUnique(findProds(parsed.brand));
+  // 7. Grade alone
+  if(parsed.grade&&results.length<3) addUnique(findProds(parsed.grade));
+  return results;
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────
@@ -857,7 +896,7 @@ function snapAndIdentify(){
         role:'user',
         content:[
           {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
-          {type:'text',text:'This is a photo of a lubricant/oil product label in a warehouse. Read all visible text on the label. Respond with JSON only, no markdown:\n{"reasoning":"what you see on the label","search":"a short 2-4 word search string using the most identifying terms from the label e.g. brand + product line + viscosity grade"}\n\nExamples: "Delo XLE 15W40", "Rotella T6 5W40", "Mobil 1 5W30", "Shell Tellus 46"'}
+          {type:'text',text:'This is a photo of a lubricant/oil product label in a warehouse. Read ALL visible text carefully. Respond with JSON only, no markdown:\n{"reasoning":"what you see","brand":"brand name e.g. Chevron, Mobil, Shell","product_line":"product line e.g. Delo 400 XLE SB, Rotella T6, Mobil 1","grade":"viscosity grade e.g. 15W40, 5W30, 0W20","vendor_code":"any product/part number code visible e.g. 257004, 1081234, 989 34 09","search":"best 2-4 word search combining brand+product+grade e.g. Delo XLE 15W40"}\n\nExamples:\n- Chevron Delo 400 XLE SB 15W40 → search: "Delo XLE 15W40"\n- Mobil 1 Advanced Full Synthetic 5W-30 → search: "Mobil 1 5W30"\n- Shell Rotella T6 5W-40 → search: "Rotella T6 5W40"\n- Kendall GT-1 MAX 5W-20 → search: "Kendall GT-1 MAX 5W20"\n- MB 229.52 SAE 0W-40 → search: "MB 229.52 0W40"'}
         ]
       }]
     })
@@ -871,50 +910,57 @@ function snapAndIdentify(){
     var clean=text.replace(/```json|```/g,'').trim();
     var parsed=JSON.parse(clean);
     document.getElementById('airReasoning').textContent=parsed.reasoning||'';
-    var searchStr=parsed.search||'';
-    // Fallback: if no search string returned, extract key terms from reasoning
-    if(!searchStr&&parsed.reasoning){
-      var r=parsed.reasoning.toUpperCase();
-      // Extract viscosity grade
-      var gradeMatch=r.match(/(\d+W[-]?\d+)/);
-      var grade=gradeMatch?gradeMatch[1].replace('-',''):'';
-      // Extract product line keywords
-      var lineKeys=['XLE','SNG','SB','T6','T4','T5','ESP','AFE','EURO','DELVAC','ROTELLA','DELO','HAVOLINE','GUARDOL','SHIELD','MEGAFLOW','VERSATRANS','SPIRAX','TELLUS','OMALA','GADUS','PENNZOIL','MOBIL','SHELL','CHEVRON','KENDALL','CASTROL','LUCAS'];
-      var foundKeys=lineKeys.filter(function(k){return r.indexOf(k)>=0;});
-      searchStr=foundKeys.slice(0,3).join(' ')+(grade?' '+grade:'');
-    }
-    // Try full search string first
-    var matches=findProds(searchStr);
-    // If too few results, try without first word (drop brand, keep product+grade)
-    if(matches.length<3&&searchStr.indexOf(' ')>=0){
-      var shorter=searchStr.substring(searchStr.indexOf(' ')+1);
-      var m2=findProds(shorter);
-      if(m2.length>matches.length) matches=m2;
-    }
-    // Limit to 15
-    matches=matches.slice(0,15);
+    var allMatches=aiSearch(parsed);
     var matchDiv=document.getElementById('airMatches');
     matchDiv.innerHTML='';
-    if(!matches.length){
+    document.getElementById('airNone').style.display='none';
+    if(!allMatches.length){
       document.getElementById('airNone').style.display='block';
       return;
     }
-    matches.forEach(function(p){
-      var btn=document.createElement('button');
-      btn.className='air-match';
-      btn.innerHTML='<div class="air-prod">'+p.PRODUCT+'</div>'
-        +'<div class="air-pak">PAK: '+(p.PAK||'—')+' | BIN: '+p.BIN_LOC+'</div>'
-        +'<div class="air-desc">'+p.DESCRIPTION+'</div>';
-      btn.onclick=function(){
-        document.getElementById('aiResult').style.display='none';
-        showMatch(p);
-      };
-      matchDiv.appendChild(btn);
-    });
+    // Render with pak filter
+    renderAiMatches(allMatches,'All');
   }).catch(function(e){
     document.getElementById('airReasoning').textContent='Error: '+e.message;
     document.getElementById('airNone').style.display='block';
     toast('AI scan failed — try again','e');
+  });
+}
+var _aiAllMatches=[];
+function renderAiMatches(matches,activeFilter){
+  _aiAllMatches=matches;
+  var matchDiv=document.getElementById('airMatches');
+  matchDiv.innerHTML='';
+  // Filter buttons
+  var filters=['All','Drum','Pail','Case'];
+  var fbar=document.createElement('div');
+  fbar.style.cssText='display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap';
+  filters.forEach(function(f){
+    var btn=document.createElement('button');
+    btn.textContent=f;
+    btn.style.cssText='padding:5px 12px;border-radius:20px;border:1px solid var(--bdr);background:'+(f===activeFilter?'var(--acc2)':'var(--surf2)')+';color:'+(f===activeFilter?'#fff':'var(--txt)')+';font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation';
+    btn.onclick=function(){renderAiMatches(matches,f);};
+    fbar.appendChild(btn);
+  });
+  matchDiv.appendChild(fbar);
+  // Filter products by pak group
+  var filtered=matches;
+  if(activeFilter!=='All'&&PAK_GROUPS[activeFilter]){
+    filtered=matches.filter(function(p){return PAK_GROUPS[activeFilter].indexOf(p.PAK)>=0;});
+    if(!filtered.length) filtered=matches; // fallback to all if filter empty
+  }
+  // Limit to 15
+  filtered.slice(0,15).forEach(function(p){
+    var btn=document.createElement('button');
+    btn.className='air-match';
+    btn.innerHTML='<div class="air-prod">'+p.PRODUCT+'</div>'
+      +'<div class="air-pak">PAK: '+(p.PAK||'—')+' | BIN: '+p.BIN_LOC+'</div>'
+      +'<div class="air-desc">'+p.DESCRIPTION+'</div>';
+    btn.onclick=function(){
+      document.getElementById('aiResult').style.display='none';
+      showMatch(p);
+    };
+    matchDiv.appendChild(btn);
   });
 }
 
