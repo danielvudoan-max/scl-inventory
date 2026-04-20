@@ -418,25 +418,55 @@ function findByVendorCode(vc){
 }
 function aiSearch(parsed){
   var results=[];
+  var brand=parsed.brand?parsed.brand.toUpperCase():'';
+  
   function addUnique(arr){
     arr.forEach(function(p){
       if(!results.find(function(r){return r.PRODUCT===p.PRODUCT&&r.PAK===p.PAK;}))results.push(p);
     });
   }
+  
+  // Filter to brand if identified
+  function brandFilter(arr){
+    if(!brand) return arr;
+    var filtered=arr.filter(function(p){
+      return p.DESCRIPTION.toUpperCase().indexOf(brand)>=0||
+             p.PRODUCT.toUpperCase().indexOf(brand)>=0;
+    });
+    return filtered.length?filtered:arr; // fallback to all if brand filter kills everything
+  }
+
   // 1. Vendor code match
-  if(parsed.vendor_code) addUnique(findByVendorCode(parsed.vendor_code));
-  // 2. Full search string
-  if(parsed.search) addUnique(findProds(parsed.search));
-  // 3. Product line + grade
-  if(parsed.product_line&&parsed.grade) addUnique(findProds(parsed.product_line+' '+parsed.grade));
-  // 4. Product line alone
-  if(parsed.product_line&&results.length<5) addUnique(findProds(parsed.product_line));
-  // 5. Brand + grade
-  if(parsed.brand&&parsed.grade&&results.length<5) addUnique(findProds(parsed.brand+' '+parsed.grade));
-  // 6. Brand alone (last resort)
-  if(parsed.brand&&results.length<3) addUnique(findProds(parsed.brand));
-  // 7. Grade alone
-  if(parsed.grade&&results.length<3) addUnique(findProds(parsed.grade));
+  if(parsed.vendor_code) addUnique(brandFilter(findByVendorCode(parsed.vendor_code)));
+  
+  // 2. Brand + product line + grade
+  if(parsed.brand&&parsed.product_line&&parsed.grade)
+    addUnique(brandFilter(findProds(parsed.brand+' '+parsed.product_line+' '+parsed.grade)));
+  
+  // 3. Brand + product line
+  if(parsed.brand&&parsed.product_line&&results.length<5)
+    addUnique(brandFilter(findProds(parsed.brand+' '+parsed.product_line)));
+  
+  // 4. Brand + grade
+  if(parsed.brand&&parsed.grade&&results.length<5)
+    addUnique(brandFilter(findProds(parsed.brand+' '+parsed.grade)));
+  
+  // 5. Full search string (brand-filtered)
+  if(parsed.search&&results.length<5)
+    addUnique(brandFilter(findProds(parsed.search)));
+
+  // 6. Product line + grade (no brand filter — broaden if brand search failed)
+  if(parsed.product_line&&parsed.grade&&results.length<3)
+    addUnique(findProds(parsed.product_line+' '+parsed.grade));
+
+  // 7. Brand alone
+  if(parsed.brand&&results.length<3)
+    addUnique(findProds(parsed.brand));
+
+  // 8. Grade alone (last resort)
+  if(parsed.grade&&results.length<3)
+    addUnique(findProds(parsed.grade));
+
   return results;
 }
 
