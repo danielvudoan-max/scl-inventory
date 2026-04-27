@@ -175,11 +175,12 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
       <option value="11">WH11 — Vista</option>
     </select>
     <button onclick="startCounting()">Start Counting</button>
+    <div id="vlbl" style="text-align:center;font-size:10px;color:var(--muted);margin-top:14px;font-family:var(--mono);letter-spacing:.05em;opacity:.6"></div>
   </div>
 </div>
 
 <!-- WAREHOUSE CONFIRM MODAL -->
-<div id="whConfirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:998;align-items:center;justify-content:center;padding:20px;-webkit-align-items:center;-webkit-justify-content:center">
+<div id="whConfirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px;-webkit-align-items:center;-webkit-justify-content:center">
   <div style="background:var(--surf);border:2px solid var(--acc);border-radius:16px;padding:24px;width:100%;max-width:340px;text-align:center">
     <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Confirm warehouse</div>
     <div id="whcLabel" style="font-size:26px;font-weight:900;color:var(--acc);margin-bottom:6px;line-height:1.15">WH1 — COLLINS</div>
@@ -342,6 +343,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script>var PRODUCTS=[];</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+// ── VERSION ───────────────────────────────────────────────────────────
+var APP_VERSION='p1.3 · 2026-04-27';
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -1168,15 +1171,22 @@ function doSubmitStep2(){
 }
 
 // ── SERVICE WORKER (inline, for PWA install) ──────────────────────────
+// Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
-  // Write SW as blob URL since we're a single file
   var swCode=[
-    "const CACHE='scl-inv-v1';",
-    "const ASSETS=['/'];",
+    "const CACHE='scl-inv-v3';",
     "self.addEventListener('install',e=>self.skipWaiting());",
-    "self.addEventListener('activate',e=>clients.claim());",
+    "self.addEventListener('activate',e=>{",
+    "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
+    "});",
     "self.addEventListener('fetch',e=>{",
-    "  e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));",
+    "  const req=e.request;",
+    "  const isHTML=req.mode==='navigate'||(req.headers.get('accept')||'').indexOf('text/html')>=0;",
+    "  if(isHTML){",
+    "    e.respondWith(fetch(req).then(r=>{const c=r.clone();caches.open(CACHE).then(ch=>ch.put(req,c));return r;}).catch(()=>caches.match(req)));",
+    "  } else {",
+    "    e.respondWith(caches.match(req).then(r=>r||fetch(req).then(rs=>{if(rs&&rs.ok){const c=rs.clone();caches.open(CACHE).then(ch=>ch.put(req,c));}return rs;})));",
+    "  }",
     "});"
   ].join('\n');
   try{
@@ -1202,6 +1212,12 @@ function toast(msg,type){
   clearTimeout(toastTmr);
   toastTmr=setTimeout(function(){t.className='';},2400);
 }
+
+// ── BOOT ──────────────────────────────────────────────────────────────
+(function(){
+  var v=document.getElementById('vlbl');
+  if(v) v.textContent='v '+APP_VERSION;
+})();
 </script>
 </body>
 </html>
