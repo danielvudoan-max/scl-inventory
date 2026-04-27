@@ -344,7 +344,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p2.0 · 2026-04-27';
+var APP_VERSION='p2.1 · 2026-04-27';
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -512,24 +512,33 @@ function aiSearch(parsed){
   if(parsed.grade&&results.length<3)
     addUnique(aliasFilter(findProds(parsed.grade)));
 
-  // 7. Last resort — alias-narrowed everything (handles HAVSYNATF where no text matches but brand is known)
-  if(alias&&results.length<3){
+  // 7. Last-resort alias fallback: if brand identified and nothing else matched,
+  // show top-N alias-narrowed products. Better to show 10 Honda items than zero.
+  if(alias && results.length===0){
     var aliasOnly=narrowByAlias(PRODUCTS,alias);
-    if(parsed.grade){
-      // Filter alias-narrowed pool by grade tokens in description
-      var gradeTokens=parsed.grade.toUpperCase().replace(/[^0-9W]/g,' ').split(/\s+/).filter(Boolean);
-      if(gradeTokens.length){
-        var gradeNarrowed=aliasOnly.filter(function(p){
-          var d=p.DESCRIPTION.toUpperCase();
-          return gradeTokens.every(function(t){return d.indexOf(t)>=0;});
-        });
-        if(gradeNarrowed.length) addUnique(gradeNarrowed.slice(0,15));
+    if(aliasOnly.length){
+      // If grade tokens are useful, sort grade-matching items first
+      var gradeTokens=[];
+      if(parsed.grade){
+        gradeTokens=parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;});
       }
-    } else if(productLine){
-      // Use product-line tokens against alias pool
-      addUnique(productLineFilter(aliasOnly).slice(0,15));
+      if(gradeTokens.length){
+        aliasOnly.sort(function(a,b){
+          var da=(a.DESCRIPTION||'').toUpperCase(), db=(b.DESCRIPTION||'').toUpperCase();
+          var sa=gradeTokens.filter(function(t){return da.indexOf(t)>=0;}).length;
+          var sb=gradeTokens.filter(function(t){return db.indexOf(t)>=0;}).length;
+          return sb-sa;
+        });
+      }
+      addUnique(aliasOnly.slice(0,10));
     }
   }
+
+  // Tag results with debug info so the UI can show alias used + candidate counts
+  results._debug={
+    alias: alias?alias.match[0]:null,
+    aliasPoolSize: alias?narrowByAlias(PRODUCTS,alias).length:0
+  };
 
   return results;
 }
@@ -1150,8 +1159,22 @@ function snapAndIdentify(){
     }
     var clean=text.replace(/```json|```/g,'').trim();
     var parsed=JSON.parse(clean);
-    document.getElementById('airReasoning').textContent=parsed.reasoning||'';
+    var reasoningEl=document.getElementById('airReasoning');
+    reasoningEl.textContent=parsed.reasoning||'';
     var allMatches=aiSearch(parsed);
+    // Debug surface — shows what AI extracted + alias hit + pool size, helps diagnose misses
+    var dbg=allMatches._debug||{};
+    var dbgLine=document.createElement('div');
+    dbgLine.style.cssText='margin-top:8px;padding-top:8px;border-top:1px dashed var(--bdr);font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5;letter-spacing:.02em';
+    var bits=[];
+    if(parsed.brand) bits.push('brand: '+parsed.brand);
+    if(parsed.product_line) bits.push('line: '+parsed.product_line);
+    if(parsed.grade) bits.push('grade: '+parsed.grade);
+    if(parsed.vendor_code) bits.push('vcode: '+parsed.vendor_code);
+    if(dbg.alias) bits.push('→ alias: '+dbg.alias+' ('+dbg.aliasPoolSize+' candidates)');
+    bits.push('→ '+allMatches.length+' matches');
+    dbgLine.textContent=bits.join(' · ');
+    reasoningEl.appendChild(dbgLine);
     var matchDiv=document.getElementById('airMatches');
     matchDiv.innerHTML='';
     document.getElementById('airNone').style.display='none';
@@ -1280,7 +1303,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v4';",
+    "const CACHE='scl-inv-v5';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
