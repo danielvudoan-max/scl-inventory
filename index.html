@@ -344,7 +344,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p1.3 · 2026-04-27';
+var APP_VERSION='p2.0 · 2026-04-27';
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -458,6 +458,7 @@ function aiSearch(parsed){
   var results=[];
   var brand=parsed.brand?parsed.brand.toUpperCase():'';
   var productLine=parsed.product_line?parsed.product_line.toUpperCase():'';
+  var alias=findBrandAlias(brand,productLine);
   
   function addUnique(arr){
     arr.forEach(function(p){
@@ -479,29 +480,134 @@ function aiSearch(parsed){
     return filtered.length?filtered:arr;
   }
 
+  // Brand alias: narrow by PRODUCT-code prefix and/or VENDOR code.
+  // Solves the case where DESCRIPTION lacks brand name (HAVSYNATF.DESC = "HAV FS MV ATF").
+  function aliasFilter(arr){
+    return narrowByAlias(arr,alias);
+  }
+  // Combined filter — alias first (vendor/prefix), then text (description).
+  function refine(arr){
+    return productLineFilter(aliasFilter(arr));
+  }
+
   // 1. Vendor code match (product line filtered)
-  if(parsed.vendor_code) addUnique(productLineFilter(findByVendorCode(parsed.vendor_code)));
+  if(parsed.vendor_code) addUnique(refine(findByVendorCode(parsed.vendor_code)));
 
   // 2. Full search string — this is the primary driver, same as typing
-  if(parsed.search) addUnique(productLineFilter(findProds(parsed.search)));
+  if(parsed.search) addUnique(refine(findProds(parsed.search)));
 
   // 3. Product line + grade
   if(parsed.product_line&&parsed.grade&&results.length<5)
-    addUnique(productLineFilter(findProds(parsed.product_line+' '+parsed.grade)));
+    addUnique(refine(findProds(parsed.product_line+' '+parsed.grade)));
 
   // 4. Product line alone
   if(parsed.product_line&&results.length<5)
-    addUnique(findProds(parsed.product_line));
+    addUnique(aliasFilter(findProds(parsed.product_line)));
 
   // 5. Brand + grade (parent brand fallback)
   if(parsed.brand&&parsed.grade&&results.length<3)
-    addUnique(productLineFilter(findProds(parsed.brand+' '+parsed.grade)));
+    addUnique(refine(findProds(parsed.brand+' '+parsed.grade)));
 
-  // 6. Grade alone (last resort)
+  // 6. Grade alone, narrowed by alias to avoid 0W20 returning every brand's 0W20
   if(parsed.grade&&results.length<3)
-    addUnique(findProds(parsed.grade));
+    addUnique(aliasFilter(findProds(parsed.grade)));
+
+  // 7. Last resort — alias-narrowed everything (handles HAVSYNATF where no text matches but brand is known)
+  if(alias&&results.length<3){
+    var aliasOnly=narrowByAlias(PRODUCTS,alias);
+    if(parsed.grade){
+      // Filter alias-narrowed pool by grade tokens in description
+      var gradeTokens=parsed.grade.toUpperCase().replace(/[^0-9W]/g,' ').split(/\s+/).filter(Boolean);
+      if(gradeTokens.length){
+        var gradeNarrowed=aliasOnly.filter(function(p){
+          var d=p.DESCRIPTION.toUpperCase();
+          return gradeTokens.every(function(t){return d.indexOf(t)>=0;});
+        });
+        if(gradeNarrowed.length) addUnique(gradeNarrowed.slice(0,15));
+      }
+    } else if(productLine){
+      // Use product-line tokens against alias pool
+      addUnique(productLineFilter(aliasOnly).slice(0,15));
+    }
+  }
 
   return results;
+}
+
+// ── BRAND ALIAS MAP ───────────────────────────────────────────────────
+// Maps AI-detected brand keywords → product-code prefixes + vendor codes.
+// PDS descriptions often lack brand names (HAVSYNATF.DESCRIPTION = "HAV FS MV ATF"
+// with no "Havoline"), so we narrow AI matches by prefix+vendor instead.
+// `match` strings are searched (uppercased) in brand+product_line concatenation.
+// First matching alias wins — order matters. More specific brands BEFORE generic.
+var BRAND_ALIASES=[
+  // ── Chevron family (vendors 27, 26) ───────────────────────────────
+  {match:['HAVOLINE','HAV'],          prefixes:['HAV'],      vendors:['27','26']},
+  {match:['DELO'],                    prefixes:['DEL'],      vendors:['27','26']},
+  {match:['URSA'],                    prefixes:['URS'],      vendors:['27','26']},
+  {match:['RPM'],                     prefixes:['RPM'],      vendors:['27','26']},
+  {match:['MEROPA'],                  prefixes:['MER'],      vendors:['27','26']},
+  {match:['RANDO'],                   prefixes:['RAN'],      vendors:['27','26']},
+  {match:['REGAL'],                   prefixes:['REG'],      vendors:['27','26']},
+  {match:['CETUS'],                   prefixes:['CET'],      vendors:['27','26']},
+  {match:['CLARITY'],                 prefixes:['CLA'],      vendors:['27','26']},
+  {match:['TARO','TARO ULTRA'],       prefixes:['TAR'],      vendors:['27','26']},
+  {match:['CHEVRON','CHV'],           prefixes:['CH','CHV'], vendors:['27','26']},
+  // ── Shell family (vendor 399) ─────────────────────────────────────
+  {match:['ROTELLA','RT6','T6','T4','T5'], prefixes:['ROT'], vendors:['399']},
+  {match:['PENNZOIL','PENN'],         prefixes:['PEN'],      vendors:['399']},
+  {match:['QUAKER STATE','QS'],       prefixes:['QS'],       vendors:['399']},
+  {match:['SHELL'],                   prefixes:['SH'],       vendors:['399']},
+  // ── ExxonMobil family (vendor 655) ────────────────────────────────
+  {match:['MOBIL 1','MOBIL1','MOBILONE'], prefixes:['MO1','MOB1'], vendors:['655']},
+  {match:['DELVAC'],                  prefixes:['DEL','MOB'], vendors:['655']},
+  {match:['MOBILGREASE','MOBIL GREASE','MOBILITH','MOBILUX','MOBILGEAR','MOBILTRANS','MOBILFLUID'], prefixes:['MOB'], vendors:['655']},
+  {match:['MOBIL'],                   prefixes:['MO','MOB'], vendors:['655']},
+  // ── Phillips 66 family (vendor 156) ───────────────────────────────
+  {match:['PHILLIPS 66','P66','PHILLIPS'], prefixes:['P66','PHL'], vendors:['156']},
+  {match:['KENDALL'],                 prefixes:['KEN'],      vendors:['156']},
+  {match:['CONOCO'],                  prefixes:['CON'],      vendors:['156']},
+  // ── Lucas (vendor 2549) ───────────────────────────────────────────
+  {match:['LUCAS'],                   prefixes:['LUC'],      vendors:['2549']},
+  // ── OEM private-label brands (often packed by P66/Idemitsu, vendors 156, 4555, 0) ──
+  {match:['ACURA'],                   prefixes:['ACU'],      vendors:['156','4555','0']},
+  {match:['HONDA'],                   prefixes:['HON'],      vendors:['156','4555','0']},
+  {match:['TOYOTA'],                  prefixes:['TOY'],      vendors:['156','4555','0']},
+  {match:['SUBARU'],                  prefixes:['SUB'],      vendors:['156','4555','0']},
+  {match:['NISSAN'],                  prefixes:['NIS'],      vendors:['156','4555','0']},
+  {match:['HYUNDAI'],                 prefixes:['HYU'],      vendors:['156','4555','0']},
+  {match:['KIA'],                     prefixes:['KIA'],      vendors:['156','4555','0']}
+];
+function findBrandAlias(brand,productLine){
+  var hay=((brand||'')+' '+(productLine||'')).toUpperCase();
+  for(var i=0;i<BRAND_ALIASES.length;i++){
+    var a=BRAND_ALIASES[i];
+    for(var j=0;j<a.match.length;j++){
+      // Word-boundary-ish match so "MOBIL" doesn't snag "AUTOMOBILE"; allow
+      // start-of-string, after-space, or after-hyphen.
+      var needle=a.match[j];
+      var idx=hay.indexOf(needle);
+      while(idx>=0){
+        var prevOk=idx===0||/[^A-Z0-9]/.test(hay.charAt(idx-1));
+        if(prevOk) return a;
+        idx=hay.indexOf(needle,idx+1);
+      }
+    }
+  }
+  return null;
+}
+function narrowByAlias(arr,alias){
+  if(!alias||!arr.length) return arr;
+  var prefixes=alias.prefixes||[], vendors=alias.vendors||[];
+  var filtered=arr.filter(function(p){
+    var pc=(p.PRODUCT||'').toUpperCase();
+    var v=String(p.VENDOR||'');
+    var prefixHit=prefixes.length>0 && prefixes.some(function(pre){return pc.indexOf(pre)===0;});
+    var vendorHit=vendors.length>0 && vendors.indexOf(v)>=0;
+    // Prefix OR vendor — either is sufficient evidence
+    return prefixHit || vendorHit;
+  });
+  return filtered.length ? filtered : arr;  // fall back to original if alias kills everything
 }
 
 // ── INVENTORY FETCH ───────────────────────────────────────────────────
@@ -1174,7 +1280,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v3';",
+    "const CACHE='scl-inv-v4';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
