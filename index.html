@@ -175,7 +175,18 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
       <option value="11">WH11 — Vista</option>
     </select>
     <button onclick="startCounting()">Start Counting</button>
-    <span class="sup-lnk" onclick="startSupervisor()">I&#39;m the supervisor — open dashboard</span>
+  </div>
+</div>
+
+<!-- WAREHOUSE CONFIRM MODAL -->
+<div id="whConfirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:998;align-items:center;justify-content:center;padding:20px;-webkit-align-items:center;-webkit-justify-content:center">
+  <div style="background:var(--surf);border:2px solid var(--acc);border-radius:16px;padding:24px;width:100%;max-width:340px;text-align:center">
+    <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Confirm warehouse</div>
+    <div id="whcLabel" style="font-size:26px;font-weight:900;color:var(--acc);margin-bottom:6px;line-height:1.15">WH1 — COLLINS</div>
+    <div id="whcCounter" style="font-size:13px;color:var(--muted);margin-bottom:18px">Counter: <b style="color:var(--txt)">—</b></div>
+    <div style="font-size:12px;color:var(--warn);background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.3);border-radius:8px;padding:10px;margin-bottom:16px;line-height:1.45">⚠ All counts will be submitted to this warehouse. Make sure it&rsquo;s correct.</div>
+    <button onclick="confirmWh()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;touch-action:manipulation">✓ Confirm &amp; Start</button>
+    <button onclick="cancelWhConfirm()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:11px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none">Change selection</button>
   </div>
 </div>
 
@@ -191,6 +202,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <header>
   <div class="logo">SCL<span id="hsub">Inventory Count</span></div>
   <div class="hdr-right">
+    <div id="whBadge" style="display:none;background:var(--acc);color:#000;border-radius:6px;padding:4px 10px;font-weight:900;font-size:13px;letter-spacing:.05em;font-family:var(--sans)">WH—</div>
     <div class="pill" id="syncpill" style="display:none"><span class="sdot" id="sdot"></span><span id="slbl">Syncing</span></div>
     <div class="pill">Counted: <b id="cnt">0</b></div>
   </div>
@@ -543,16 +555,33 @@ var lastCode='', lastCodeTime=0;
 var scanTimer=null, syncIv=null;
 
 // ── MODAL ─────────────────────────────────────────────────────────────
+var WH_LABELS={'1':'COLLINS','2':'RICHMOND','4':'LANCASTER','7':'SAN JOSE','9':'WATSONVILLE','11':'VISTA'};
 function startCounting(){
   var n=(document.getElementById('ni').value||'').trim();
   if(!n){toast('Enter your name first','w');return;}
   var whEl=document.getElementById('whsel');
   var wh=whEl?whEl.value:'';
   if(!wh){toast('Pick a warehouse first','w');return;}
-  workerName=n; isSup=false; selectedWh=wh;
+  // Stash and show confirm modal
+  workerName=n; selectedWh=wh;
+  document.getElementById('whcLabel').textContent='WH'+wh+' — '+(WH_LABELS[wh]||'');
+  document.getElementById('whcCounter').innerHTML='Counter: <b style="color:var(--txt)">'+n+'</b>';
+  document.getElementById('whConfirm').style.display='flex';
+}
+function cancelWhConfirm(){
+  document.getElementById('whConfirm').style.display='none';
+  // workerName/selectedWh already set but harmless — they get overwritten on next attempt
+}
+function confirmWh(){
+  document.getElementById('whConfirm').style.display='none';
+  isSup=false;
+  var wh=selectedWh, n=workerName;
   loadInventoryForWh(wh).then(function(count){
     document.getElementById('modal').className='gone';
-    document.getElementById('hsub').textContent=' — '+n+' · WH'+wh;
+    document.getElementById('hsub').textContent=' — '+n;
+    var badge=document.getElementById('whBadge');
+    badge.textContent='WH'+wh+' · '+(WH_LABELS[wh]||'');
+    badge.style.display='inline-block';
     document.getElementById('submitBtn').style.display='block';
     showOfflineBanner(false);
     startSync();
