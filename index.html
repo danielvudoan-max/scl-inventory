@@ -344,7 +344,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p2.1 · 2026-04-27';
+var APP_VERSION='p2.2 · 2026-04-27';
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -466,78 +466,132 @@ function aiSearch(parsed){
     });
   }
 
-  // Use product_line as primary filter (more specific than brand)
-  // Only fall back to brand if product_line filter kills everything
+  // Product-category abbreviation map. Bidirectional: a label saying "Power Steering Fluid"
+  // can match descriptions containing PSF, and vice versa. Same for ATF, PCMO, etc.
+  var ABBR_MAP=[
+    {abbr:'PSF', words:['POWER STEERING FLUID','POWER STEERING','PSF']},
+    {abbr:'ATF', words:['ATF','AUTOMATIC TRANSMISSION FLUID','TRANSMISSION FLUID','TRANS FLUID']},
+    {abbr:'MTF', words:['MTF','MANUAL TRANSMISSION FLUID']},
+    {abbr:'PCMO',words:['PCMO','PASSENGER CAR MOTOR OIL','MOTOR OIL','ENGINE OIL']},
+    {abbr:'HDMO',words:['HDMO','HEAVY DUTY MOTOR OIL','HEAVY DUTY ENGINE OIL']},
+    {abbr:'HF',  words:['HYDRAULIC FLUID','HYDRAULIC OIL','HYD']},
+    {abbr:'GO',  words:['GEAR OIL','GEAR LUBE','GL-5','GL-4']},
+    {abbr:'CF',  words:['COOLANT','ANTIFREEZE','50/50']},
+    {abbr:'BF',  words:['BRAKE FLUID','DOT3','DOT4','DOT 3','DOT 4']},
+    {abbr:'GR',  words:['GREASE']},
+    {abbr:'DEF', words:['DEF','DIESEL EXHAUST FLUID']}
+  ];
+  // Returns expanded token list for a given productLine string.
+  // E.g. "Honda Genuine Power Steering Fluid" → ["HONDA","GENUINE","POWER","STEERING","FLUID","PSF"]
+  function expandTokens(text){
+    if(!text) return [];
+    var up=text.toUpperCase();
+    var tokens=up.split(/[^A-Z0-9]+/).filter(function(w){return w.length>=3;});
+    // Add abbreviation matches both directions
+    for(var i=0;i<ABBR_MAP.length;i++){
+      var entry=ABBR_MAP[i];
+      var hit=entry.words.some(function(w){return up.indexOf(w)>=0;}) || tokens.indexOf(entry.abbr)>=0;
+      if(hit){
+        // Add the abbreviation if not present
+        if(tokens.indexOf(entry.abbr)<0) tokens.push(entry.abbr);
+        // Add primary word forms (first 1-2 keywords) for cross-matching
+        entry.words.forEach(function(w){
+          w.split(/\s+/).forEach(function(part){
+            if(part.length>=3 && tokens.indexOf(part)<0) tokens.push(part);
+          });
+        });
+      }
+    }
+    return tokens;
+  }
+  // Score a product against a list of tokens — count how many appear in description.
+  function scoreByTokens(p,tokens){
+    if(!tokens.length) return 0;
+    var d=(p.DESCRIPTION||'').toUpperCase()+' '+(p.PRODUCT||'').toUpperCase();
+    return tokens.filter(function(t){return d.indexOf(t)>=0;}).length;
+  }
+
+  var lineTokens=expandTokens(productLine);
+  // Generic words that nearly every description contains — exclude from scoring noise
+  var STOP=['HONDA','TOYOTA','ACURA','SUBARU','GENUINE','FLUID','OIL','SYNTHETIC','FULL','CONVENTIONAL'];
+  var scoringTokens=lineTokens.filter(function(t){return STOP.indexOf(t)<0;});
+
   function productLineFilter(arr){
-    if(!productLine) return arr;
-    // Extract first meaningful word of product line (e.g. "Havoline" from "Havoline ATF")
-    var plWords=productLine.split(' ').filter(function(w){return w.length>=4;});
-    if(!plWords.length) return arr;
+    if(!lineTokens.length) return arr;
+    // Filter to items whose description contains at least one product-line token
     var filtered=arr.filter(function(p){
-      var d=p.DESCRIPTION.toUpperCase();
-      return plWords.some(function(w){return d.indexOf(w)>=0;});
+      var d=(p.DESCRIPTION||'').toUpperCase()+' '+(p.PRODUCT||'').toUpperCase();
+      return lineTokens.some(function(w){return d.indexOf(w)>=0;});
     });
     return filtered.length?filtered:arr;
   }
 
-  // Brand alias: narrow by PRODUCT-code prefix and/or VENDOR code.
-  // Solves the case where DESCRIPTION lacks brand name (HAVSYNATF.DESC = "HAV FS MV ATF").
-  function aliasFilter(arr){
-    return narrowByAlias(arr,alias);
+  // ALIAS RULE: if a brand alias was found, EVERY stage hard-narrows by alias.
+  // STRICT mode — if alias filters to zero, return empty (don't fall back to original).
+  // This stops cross-brand junk (e.g. Sinclair) from appearing under a Honda search.
+  function gate(arr){
+    if(!alias) return arr;
+    var prefixes=alias.prefixes||[], vendors=alias.vendors||[];
+    return arr.filter(function(p){
+      var pc=(p.PRODUCT||'').toUpperCase();
+      var v=String(p.VENDOR||'');
+      var prefixHit=prefixes.length>0 && prefixes.some(function(pre){return pc.indexOf(pre)===0;});
+      var vendorHit=vendors.length>0 && vendors.indexOf(v)>=0;
+      return prefixHit || vendorHit;
+    });
   }
-  // Combined filter — alias first (vendor/prefix), then text (description).
   function refine(arr){
-    return productLineFilter(aliasFilter(arr));
+    return productLineFilter(gate(arr));
   }
 
-  // 1. Vendor code match (product line filtered)
+  // 1. Vendor code match (gated through alias if any)
   if(parsed.vendor_code) addUnique(refine(findByVendorCode(parsed.vendor_code)));
 
-  // 2. Full search string — this is the primary driver, same as typing
+  // 2. Full search string from AI
   if(parsed.search) addUnique(refine(findProds(parsed.search)));
 
   // 3. Product line + grade
   if(parsed.product_line&&parsed.grade&&results.length<5)
     addUnique(refine(findProds(parsed.product_line+' '+parsed.grade)));
 
-  // 4. Product line alone
+  // 4. Product line alone — gated by alias (no productLineFilter so we don't double-filter)
   if(parsed.product_line&&results.length<5)
-    addUnique(aliasFilter(findProds(parsed.product_line)));
+    addUnique(gate(findProds(parsed.product_line)));
 
-  // 5. Brand + grade (parent brand fallback)
-  if(parsed.brand&&parsed.grade&&results.length<3)
+  // 5. Brand + grade
+  if(parsed.brand&&parsed.grade&&results.length<5)
     addUnique(refine(findProds(parsed.brand+' '+parsed.grade)));
 
-  // 6. Grade alone, narrowed by alias to avoid 0W20 returning every brand's 0W20
+  // 6. Grade alone, gated by alias
   if(parsed.grade&&results.length<3)
-    addUnique(aliasFilter(findProds(parsed.grade)));
+    addUnique(gate(findProds(parsed.grade)));
 
-  // 7. Last-resort alias fallback: if brand identified and nothing else matched,
-  // show top-N alias-narrowed products. Better to show 10 Honda items than zero.
-  if(alias && results.length===0){
+  // 7. Last-resort alias fallback: if brand identified, surface top alias-narrowed products
+  // ranked by relevance to product_line + grade tokens. Fires on <5 results, not just 0.
+  if(alias && results.length<5){
     var aliasOnly=narrowByAlias(PRODUCTS,alias);
     if(aliasOnly.length){
-      // If grade tokens are useful, sort grade-matching items first
-      var gradeTokens=[];
-      if(parsed.grade){
-        gradeTokens=parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;});
-      }
-      if(gradeTokens.length){
-        aliasOnly.sort(function(a,b){
-          var da=(a.DESCRIPTION||'').toUpperCase(), db=(b.DESCRIPTION||'').toUpperCase();
-          var sa=gradeTokens.filter(function(t){return da.indexOf(t)>=0;}).length;
-          var sb=gradeTokens.filter(function(t){return db.indexOf(t)>=0;}).length;
-          return sb-sa;
-        });
-      }
-      addUnique(aliasOnly.slice(0,10));
+      var gradeTokens=parsed.grade?
+        parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;})
+        :[];
+      var allRankTokens=scoringTokens.concat(gradeTokens);
+      // Score each candidate
+      var scored=aliasOnly.map(function(p){
+        return {p:p, score:scoreByTokens(p,allRankTokens)};
+      });
+      // Sort by score desc, keep only items with score>=1 (must match at least one specific token)
+      scored.sort(function(a,b){return b.score-a.score;});
+      var topScored=scored.filter(function(s){return s.score>=1;}).slice(0,10);
+      addUnique(topScored.map(function(s){return s.p;}));
     }
   }
 
   // Tag results with debug info so the UI can show alias used + candidate counts
   results._debug={
     alias: alias?alias.match[0]:null,
-    aliasPoolSize: alias?narrowByAlias(PRODUCTS,alias).length:0
+    aliasPoolSize: alias?narrowByAlias(PRODUCTS,alias).length:0,
+    lineTokens: lineTokens.join(','),
+    scoringTokens: scoringTokens.join(',')
   };
 
   return results;
@@ -1303,7 +1357,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v5';",
+    "const CACHE='scl-inv-v6';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
