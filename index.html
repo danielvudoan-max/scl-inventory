@@ -248,6 +248,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
     <div id="aiResult">
       <div class="air-title">&#129302; AI identified these matches</div>
       <div class="air-reasoning" id="airReasoning"></div>
+      <div id="airFallbackBanner" style="display:none;background:rgba(255,149,0,.12);border:1px solid rgba(255,149,0,.4);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12px;color:var(--warn);line-height:1.45">⚠ <b>Best alternatives</b> — exact brand not found in inventory. These are description-text matches; verify before saving.</div>
       <div class="air-matches" id="airMatches"></div>
       <div class="air-none" id="airNone" style="display:none">No confident match found — try typing the product code manually.</div>
     </div>
@@ -344,7 +345,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p2.2 · 2026-04-27';
+var APP_VERSION='p2.3 · 2026-04-27';
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -526,12 +527,15 @@ function aiSearch(parsed){
     return filtered.length?filtered:arr;
   }
 
-  // ALIAS RULE: if a brand alias was found, EVERY stage hard-narrows by alias.
-  // STRICT mode — if alias filters to zero, return empty (don't fall back to original).
-  // This stops cross-brand junk (e.g. Sinclair) from appearing under a Honda search.
+  // ALIAS RULE — two-tier:
+  //   OEM brands (Honda/Acura/Toyota/etc): PREFIX ONLY. Their vendors (156/4555/0) are
+  //   shared across multiple OEMs — narrowing by vendor would pull Acura into Honda searches.
+  //   Brand-exclusive (Chevron/Shell/Mobil/Lucas): prefix OR vendor.
+  // STRICT in both cases — if filter kills all, return empty (description fallback handles miss).
   function gate(arr){
     if(!alias) return arr;
-    var prefixes=alias.prefixes||[], vendors=alias.vendors||[];
+    var prefixes=alias.prefixes||[];
+    var vendors=(alias.oem ? [] : (alias.vendors||[]));  // OEMs ignore vendor list
     return arr.filter(function(p){
       var pc=(p.PRODUCT||'').toUpperCase();
       var v=String(p.VENDOR||'');
@@ -566,32 +570,64 @@ function aiSearch(parsed){
   if(parsed.grade&&results.length<3)
     addUnique(gate(findProds(parsed.grade)));
 
-  // 7. Last-resort alias fallback: if brand identified, surface top alias-narrowed products
-  // ranked by relevance to product_line + grade tokens. Fires on <5 results, not just 0.
+  // 7. Alias-pool ranking — if brand identified, surface top alias-narrowed products
+  // ranked by relevance. Fires on <5 results (additive).
   if(alias && results.length<5){
-    var aliasOnly=narrowByAlias(PRODUCTS,alias);
+    var aliasOnly=gate(PRODUCTS);  // uses two-tier gate (prefix-only for OEM)
     if(aliasOnly.length){
       var gradeTokens=parsed.grade?
         parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;})
         :[];
       var allRankTokens=scoringTokens.concat(gradeTokens);
-      // Score each candidate
       var scored=aliasOnly.map(function(p){
         return {p:p, score:scoreByTokens(p,allRankTokens)};
       });
-      // Sort by score desc, keep only items with score>=1 (must match at least one specific token)
       scored.sort(function(a,b){return b.score-a.score;});
       var topScored=scored.filter(function(s){return s.score>=1;}).slice(0,10);
       addUnique(topScored.map(function(s){return s.p;}));
     }
   }
 
-  // Tag results with debug info so the UI can show alias used + candidate counts
+  // 8. DESCRIPTION FALLBACK — if STILL nothing (brand not in inventory, or no alias matched),
+  // search ALL of inventory by description-text only and return top alternatives.
+  // Per "99.9% of items exist" rule — never return empty if any product matches the description.
+  // These are flagged as alternatives so the UI can label them clearly.
+  var isFallback=false;
+  if(results.length===0 && scoringTokens.length>0){
+    isFallback=true;
+    var gradeTokens2=parsed.grade?
+      parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;})
+      :[];
+    var fallbackTokens=scoringTokens.concat(gradeTokens2);
+    var altScored=PRODUCTS.map(function(p){
+      return {p:p, score:scoreByTokens(p,fallbackTokens)};
+    });
+    altScored.sort(function(a,b){return b.score-a.score;});
+    var topAlts=altScored.filter(function(s){return s.score>=1;}).slice(0,10);
+    addUnique(topAlts.map(function(s){return s.p;}));
+  }
+
+  // Compute top-5 scored items (across either stage 7 alias pool or stage 8 fallback) for debug
+  var debugTop5=[];
+  if(scoringTokens.length){
+    var allTok=scoringTokens.concat(parsed.grade?parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;}):[]);
+    var poolForDebug=alias?gate(PRODUCTS):PRODUCTS;
+    if(poolForDebug.length){
+      debugTop5=poolForDebug.map(function(p){return {p:p,score:scoreByTokens(p,allTok)};})
+        .sort(function(a,b){return b.score-a.score;})
+        .slice(0,5)
+        .map(function(s){return s.p.PRODUCT+'='+s.score;});
+    }
+  }
+
+  // Tag results with debug info + fallback flag
   results._debug={
     alias: alias?alias.match[0]:null,
-    aliasPoolSize: alias?narrowByAlias(PRODUCTS,alias).length:0,
+    aliasPoolSize: alias?gate(PRODUCTS).length:0,
     lineTokens: lineTokens.join(','),
-    scoringTokens: scoringTokens.join(',')
+    scoringTokens: scoringTokens.join(','),
+    isFallback: isFallback,
+    top5: debugTop5.join(' / ')
   };
 
   return results;
@@ -604,7 +640,7 @@ function aiSearch(parsed){
 // `match` strings are searched (uppercased) in brand+product_line concatenation.
 // First matching alias wins — order matters. More specific brands BEFORE generic.
 var BRAND_ALIASES=[
-  // ── Chevron family (vendors 27, 26) ───────────────────────────────
+  // ── Chevron family (vendors 27, 26 — brand-exclusive, vendor narrowing safe) ──
   {match:['HAVOLINE','HAV'],          prefixes:['HAV'],      vendors:['27','26']},
   {match:['DELO'],                    prefixes:['DEL'],      vendors:['27','26']},
   {match:['URSA'],                    prefixes:['URS'],      vendors:['27','26']},
@@ -616,30 +652,32 @@ var BRAND_ALIASES=[
   {match:['CLARITY'],                 prefixes:['CLA'],      vendors:['27','26']},
   {match:['TARO','TARO ULTRA'],       prefixes:['TAR'],      vendors:['27','26']},
   {match:['CHEVRON','CHV'],           prefixes:['CH','CHV'], vendors:['27','26']},
-  // ── Shell family (vendor 399) ─────────────────────────────────────
+  // ── Shell family (vendor 399 — brand-exclusive) ──────────────────
   {match:['ROTELLA','RT6','T6','T4','T5'], prefixes:['ROT'], vendors:['399']},
   {match:['PENNZOIL','PENN'],         prefixes:['PEN'],      vendors:['399']},
   {match:['QUAKER STATE','QS'],       prefixes:['QS'],       vendors:['399']},
   {match:['SHELL'],                   prefixes:['SH'],       vendors:['399']},
-  // ── ExxonMobil family (vendor 655) ────────────────────────────────
+  // ── ExxonMobil family (vendor 655 — brand-exclusive) ─────────────
   {match:['MOBIL 1','MOBIL1','MOBILONE'], prefixes:['MO1','MOB1'], vendors:['655']},
   {match:['DELVAC'],                  prefixes:['DEL','MOB'], vendors:['655']},
   {match:['MOBILGREASE','MOBIL GREASE','MOBILITH','MOBILUX','MOBILGEAR','MOBILTRANS','MOBILFLUID'], prefixes:['MOB'], vendors:['655']},
   {match:['MOBIL'],                   prefixes:['MO','MOB'], vendors:['655']},
-  // ── Phillips 66 family (vendor 156) ───────────────────────────────
-  {match:['PHILLIPS 66','P66','PHILLIPS'], prefixes:['P66','PHL'], vendors:['156']},
-  {match:['KENDALL'],                 prefixes:['KEN'],      vendors:['156']},
-  {match:['CONOCO'],                  prefixes:['CON'],      vendors:['156']},
-  // ── Lucas (vendor 2549) ───────────────────────────────────────────
+  // ── Phillips 66 family (vendor 156 — SHARED with OEMs, prefix-only) ──
+  // Note: P66 alone uses prefix only because vendor 156 also packs Honda/Acura/Toyota OEM
+  {match:['PHILLIPS 66','P66','PHILLIPS'], prefixes:['P66','PHL'], vendors:[], oem:true},
+  {match:['KENDALL'],                 prefixes:['KEN'],      vendors:[], oem:true},
+  {match:['CONOCO'],                  prefixes:['CON'],      vendors:[], oem:true},
+  // ── Lucas (vendor 2549 — brand-exclusive) ────────────────────────
   {match:['LUCAS'],                   prefixes:['LUC'],      vendors:['2549']},
-  // ── OEM private-label brands (often packed by P66/Idemitsu, vendors 156, 4555, 0) ──
-  {match:['ACURA'],                   prefixes:['ACU'],      vendors:['156','4555','0']},
-  {match:['HONDA'],                   prefixes:['HON'],      vendors:['156','4555','0']},
-  {match:['TOYOTA'],                  prefixes:['TOY'],      vendors:['156','4555','0']},
-  {match:['SUBARU'],                  prefixes:['SUB'],      vendors:['156','4555','0']},
-  {match:['NISSAN'],                  prefixes:['NIS'],      vendors:['156','4555','0']},
-  {match:['HYUNDAI'],                 prefixes:['HYU'],      vendors:['156','4555','0']},
-  {match:['KIA'],                     prefixes:['KIA'],      vendors:['156','4555','0']}
+  // ── OEM private-label brands (shared vendors 156, 4555, 0 — PREFIX ONLY) ──
+  // oem:true → gate uses prefix only, never vendor (would pull other OEMs)
+  {match:['ACURA'],                   prefixes:['ACU'],      vendors:['156','4555','0'], oem:true},
+  {match:['HONDA'],                   prefixes:['HON'],      vendors:['156','4555','0'], oem:true},
+  {match:['TOYOTA'],                  prefixes:['TOY'],      vendors:['156','4555','0'], oem:true},
+  {match:['SUBARU'],                  prefixes:['SUB'],      vendors:['156','4555','0'], oem:true},
+  {match:['NISSAN'],                  prefixes:['NIS'],      vendors:['156','4555','0'], oem:true},
+  {match:['HYUNDAI'],                 prefixes:['HYU'],      vendors:['156','4555','0'], oem:true},
+  {match:['KIA'],                     prefixes:['KIA'],      vendors:['156','4555','0'], oem:true}
 ];
 function findBrandAlias(brand,productLine){
   var hay=((brand||'')+' '+(productLine||'')).toUpperCase();
@@ -1225,13 +1263,17 @@ function snapAndIdentify(){
     if(parsed.product_line) bits.push('line: '+parsed.product_line);
     if(parsed.grade) bits.push('grade: '+parsed.grade);
     if(parsed.vendor_code) bits.push('vcode: '+parsed.vendor_code);
-    if(dbg.alias) bits.push('→ alias: '+dbg.alias+' ('+dbg.aliasPoolSize+' candidates)');
-    bits.push('→ '+allMatches.length+' matches');
+    if(dbg.alias) bits.push('→ alias: '+dbg.alias+' ('+dbg.aliasPoolSize+' in pool)');
+    if(dbg.isFallback) bits.push('→ FALLBACK (no brand match, showing alternatives)');
+    bits.push('→ '+allMatches.length+' results');
+    if(dbg.top5) bits.push('top-5: '+dbg.top5);
     dbgLine.textContent=bits.join(' · ');
     reasoningEl.appendChild(dbgLine);
     var matchDiv=document.getElementById('airMatches');
     matchDiv.innerHTML='';
     document.getElementById('airNone').style.display='none';
+    // Toggle fallback banner
+    document.getElementById('airFallbackBanner').style.display=dbg.isFallback?'block':'none';
     if(!allMatches.length){
       document.getElementById('airNone').style.display='block';
       return;
@@ -1357,7 +1399,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v6';",
+    "const CACHE='scl-inv-v7';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
