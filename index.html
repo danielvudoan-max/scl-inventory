@@ -142,12 +142,12 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 .snap-btn{position:absolute;bottom:14px;left:50%;-webkit-transform:translateX(-50%);transform:translateX(-50%);background:var(--acc2);color:#fff;border:none;border-radius:30px;padding:10px 28px;font-family:var(--sans);font-weight:700;font-size:14px;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;white-space:nowrap}
 #aiResult{display:none;background:var(--surface);border:1px solid var(--acc2);border-radius:12px;padding:14px;margin-bottom:10px;animation:slideIn .15s ease}
 .air-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--acc2);margin-bottom:10px;font-family:var(--sans);font-weight:700}
-.air-matches{display:-webkit-flex;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-.air-match{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;text-align:left;width:100%;font-family:var(--sans)}
+.air-matches{display:-webkit-flex;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.air-match{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;text-align:left;width:100%;font-family:var(--sans)}
 .air-match:active{border-color:var(--acc2)}
-.air-prod{font-family:var(--mono);font-size:13px;color:var(--acc);font-weight:700}
-.air-pak{font-size:10px;color:var(--warn);margin-top:1px}
-.air-desc{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.3}
+.air-prod{font-family:var(--mono);font-size:16px;color:var(--acc);font-weight:700;letter-spacing:.02em}
+.air-pak{font-size:12px;color:var(--warn);margin-top:3px;font-family:var(--mono)}
+.air-desc{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}
 .air-conf{font-size:10px;color:var(--acc2);margin-top:4px;font-family:var(--mono)}
 .air-reasoning{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:10px;line-height:1.4;padding:8px;background:var(--bg);border-radius:6px}
 .air-none{font-size:12px;color:var(--muted);text-align:center;padding:8px}
@@ -200,6 +200,37 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   </div>
 </div>
 
+<!-- ADD NEW ITEM MODAL -->
+<div id="newItemModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9996;align-items:flex-start;justify-content:center;padding:20px 16px;overflow-y:auto;-webkit-align-items:flex-start;-webkit-justify-content:center;-webkit-overflow-scrolling:touch">
+  <div style="background:var(--surf);border:2px solid var(--acc2);border-radius:14px;padding:20px;width:100%;max-width:360px;margin:auto">
+    <div style="font-size:18px;font-weight:800;color:var(--acc2);margin-bottom:4px">Add new item</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.45">Use this when the product isn&rsquo;t in inventory yet. Supervisor will be notified to add it after submission.</div>
+
+    <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Product code <span style="color:var(--danger)">*</span></label>
+    <input id="niProdCode" type="text" placeholder="e.g. MOBSHC630" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="30" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:15px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;letter-spacing:.04em;box-sizing:border-box">
+
+    <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Description <span style="color:var(--danger)">*</span></label>
+    <input id="niDesc" type="text" placeholder="e.g. MOBIL SHC 630" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="60" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--txt);outline:none;margin-bottom:12px;box-sizing:border-box">
+
+    <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Pack <span style="color:var(--danger)">*</span></label>
+    <select id="niPak" onchange="onNiPakChange()" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:15px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22 fill=%22none%22 stroke=%22%2300d4aa%22 stroke-width=%222%22><path d=%22M1 1l4 4 4-4%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;box-sizing:border-box">
+      <option value="">— Choose pack —</option>
+    </select>
+    <input id="niPakOther" type="text" placeholder="Custom pack (e.g. 8X1G)" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="10" style="display:none;width:100%;background:var(--surf2);border:1px solid var(--acc2);border-radius:6px;padding:10px 12px;font-size:15px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;letter-spacing:.04em;box-sizing:border-box">
+
+    <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Count <span style="color:var(--danger)">*</span></label>
+    <input id="niCount" type="number" inputmode="decimal" placeholder="0" min="0" step="any" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:17px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;text-align:center;box-sizing:border-box">
+
+    <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Notes <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional — vendor part #, location, etc.)</span></label>
+    <textarea id="niNotes" rows="2" placeholder="e.g. vendor # 110844, drum just received" autocorrect="off" maxlength="120" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:13px;color:var(--txt);outline:none;margin-bottom:18px;resize:vertical;font-family:var(--sans);box-sizing:border-box"></textarea>
+
+    <div style="display:flex;gap:8px">
+      <button onclick="cancelNewItem()" style="flex:1;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:12px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;-webkit-appearance:none">Cancel</button>
+      <button onclick="saveNewItem()" style="flex:2;background:var(--acc2);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">+ Add &amp; save count</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="logo">SCL<span id="hsub">Inventory Count</span></div>
   <div class="hdr-right">
@@ -222,7 +253,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
       <span class="sico">&#9655;</span>
       <input id="scanInput" type="text" placeholder="Scan or type product code..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="onScanInput()" onkeydown="if(event.keyCode===13){event.preventDefault();doSearch(this.value.trim())}">
     </div>
-    <button class="cambtn" id="cambtn" onclick="toggleCamera()">
+    <button class="cambtn" id="cambtn" onclick="toggleCamera()" style="display:none">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       Scan Barcode
     </button>
@@ -249,8 +280,15 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
       <div class="air-title">&#129302; AI identified these matches</div>
       <div class="air-reasoning" id="airReasoning"></div>
       <div id="airFallbackBanner" style="display:none;background:rgba(255,149,0,.12);border:1px solid rgba(255,149,0,.4);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12px;color:var(--warn);line-height:1.45">⚠ <b>Best alternatives</b> — exact brand not found in inventory. These are description-text matches; verify before saving.</div>
+      <div id="airWeakBanner" style="display:none;background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.3);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12px;color:#ffd060;line-height:1.45"><b>No exact match</b> for <span id="airWeakQuery"></span>. Showing other <span id="airWeakBrand"></span> products in inventory — your item may not be stocked yet.</div>
       <div class="air-matches" id="airMatches"></div>
-      <div class="air-none" id="airNone" style="display:none">No confident match found — try typing the product code manually.</div>
+      <div id="airAddNewWrap" style="display:none;margin-top:8px;padding-top:10px;border-top:1px dashed var(--bdr)">
+        <button onclick="openNewItem()" style="width:100%;background:transparent;color:var(--acc2);border:1px solid var(--acc2);border-radius:8px;padding:10px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">+ My item isn&rsquo;t here — add new</button>
+      </div>
+      <div class="air-none" id="airNone" style="display:none;text-align:center">
+        <div style="margin-bottom:12px">No confident match found.</div>
+        <button onclick="openNewItem()" style="width:100%;background:var(--acc2);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">+ Add new item not in inventory</button>
+      </div>
     </div>
     <div id="ml"></div>
     <div id="mc">
@@ -345,7 +383,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p2.3 · 2026-04-27';
+var APP_VERSION='p3.0 · 2026-04-27';
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -408,10 +446,31 @@ function buildIndex(){
 buildIndex();
 
 // PAK groupings for filter
+// ── PAK CATEGORIZATION ────────────────────────────────────────────────
+// Auto-rule per Daniel's spec:
+//   - Equals BK or BKP, or starts with BK → Bulk
+//   - Ends in N or D, OR is exactly 3 digits → Drum
+//   - Ends in P (and not BK/BKP) → Pail
+//   - Everything else → Case
+// 1EA, 1G etc. fall to Case naturally.
+function categorizePak(pak){
+  if(!pak) return 'Case';
+  var p=String(pak).toUpperCase().trim();
+  if(p==='BK' || p==='BKP' || p.indexOf('BK')===0) return 'Bulk';
+  if(/^\d{3}$/.test(p)) return 'Drum';
+  var last=p.charAt(p.length-1);
+  if(last==='N' || last==='D') return 'Drum';
+  if(last==='P') return 'Pail';
+  return 'Case';
+}
+
+// PAK_GROUPS preserved for filter buttons but now includes Bulk.
+// Static lists kept for legacy compatibility — categorizePak() is the modern source of truth.
 var PAK_GROUPS={
-  'Drum':['55D','55N','54D','54N','52D','41D','40D','37D','BK','BKP'],
+  'Drum':['55D','55N','54D','54N','52D','41D','40D','40N','37D'],
   'Pail':['5P','35P','30P','33P','38P','47P'],
-  'Case':['12Q','6Q','3J','12L','10T','40T','1.1','4.1','120','6G','4J','24E','12E','6E','6J','24B','12T','10E','35Q','2J','4E','1QR','1C','12B','6Q','40N']
+  'Case':['12Q','6Q','3J','12L','10T','40T','1.1','4.1','120','6G','4J','24E','12E','6E','6J','24B','12T','10E','35Q','2J','4E','1QR','1C','12B','6Q','1EA','1G','2.5G'],
+  'Bulk':['BK','BKP']
 };
 
 function normalizeGrade(s){
@@ -583,7 +642,7 @@ function aiSearch(parsed){
         return {p:p, score:scoreByTokens(p,allRankTokens)};
       });
       scored.sort(function(a,b){return b.score-a.score;});
-      var topScored=scored.filter(function(s){return s.score>=1;}).slice(0,10);
+      var topScored=scored.filter(function(s){return s.score>=1;}).slice(0,20);
       addUnique(topScored.map(function(s){return s.p;}));
     }
   }
@@ -603,30 +662,39 @@ function aiSearch(parsed){
       return {p:p, score:scoreByTokens(p,fallbackTokens)};
     });
     altScored.sort(function(a,b){return b.score-a.score;});
-    var topAlts=altScored.filter(function(s){return s.score>=1;}).slice(0,10);
+    var topAlts=altScored.filter(function(s){return s.score>=1;}).slice(0,20);
     addUnique(topAlts.map(function(s){return s.p;}));
   }
 
   // Compute top-5 scored items (across either stage 7 alias pool or stage 8 fallback) for debug
   var debugTop5=[];
+  var maxScore=0;
   if(scoringTokens.length){
     var allTok=scoringTokens.concat(parsed.grade?parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;}):[]);
     var poolForDebug=alias?gate(PRODUCTS):PRODUCTS;
     if(poolForDebug.length){
-      debugTop5=poolForDebug.map(function(p){return {p:p,score:scoreByTokens(p,allTok)};})
-        .sort(function(a,b){return b.score-a.score;})
-        .slice(0,5)
-        .map(function(s){return s.p.PRODUCT+'='+s.score;});
+      var scoredAll=poolForDebug.map(function(p){return {p:p,score:scoreByTokens(p,allTok)};})
+        .sort(function(a,b){return b.score-a.score;});
+      debugTop5=scoredAll.slice(0,5).map(function(s){return s.p.PRODUCT+'='+s.score;});
+      // Score the actual returned results, not the whole pool — that's what counter sees
+      maxScore=results.length>0 ? Math.max.apply(null, results.map(function(p){return scoreByTokens(p,allTok);})) : 0;
     }
   }
 
-  // Tag results with debug info + fallback flag
+  // Weak-match flag: alias hit + got results, but no result scored >=2 tokens.
+  // Means we found brand-correct products but couldn't confirm the specific line/grade.
+  // UI shows soft banner "No exact match for X — showing other [Brand] products".
+  var isWeakMatch = !!alias && !isFallback && results.length>0 && maxScore<2;
+
+  // Tag results with debug info + flags
   results._debug={
     alias: alias?alias.match[0]:null,
     aliasPoolSize: alias?gate(PRODUCTS).length:0,
     lineTokens: lineTokens.join(','),
     scoringTokens: scoringTokens.join(','),
     isFallback: isFallback,
+    isWeakMatch: isWeakMatch,
+    maxScore: maxScore,
     top5: debugTop5.join(' / ')
   };
 
@@ -813,15 +881,9 @@ function startSupervisor(){
   switchTab('sup');
 }
 function showOfflineBanner(forSup){
-  if(HAS_CLOUD){
-    document.getElementById('syncpill').style.display='';
-    document.getElementById('offbanner').style.display='none';
-  } else {
-    document.getElementById('syncpill').style.display='none';
-    var b=document.getElementById('offbanner');
-    b.style.display='block';
-    b.textContent=forSup?'⚠️ Live sync needs Claude.ai — open in Claude for real-time dashboard':'📱 Tip: tap Share → Add to Home Screen to install as an app';
-  }
+  // Tip banner hidden in p2.5 per Daniel's request — function preserved for future use
+  document.getElementById('syncpill').style.display=HAS_CLOUD?'':'none';
+  document.getElementById('offbanner').style.display='none';
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────
@@ -855,8 +917,9 @@ function doSearch(q){
     var mc=document.getElementById('mc');
     mc.style.display='block'; mc.className='nf';
     document.getElementById('mcont').style.display='none';
-    document.getElementById('nfmsg').style.display='block';
-    document.getElementById('nfmsg').textContent='No product found for "'+q+'"';
+    var nfm=document.getElementById('nfmsg');
+    nfm.style.display='block';
+    nfm.innerHTML='<div style="margin-bottom:10px">No product found for "'+q.replace(/[<>&]/g,'')+'"</div><button onclick="openNewItem()" style="background:var(--acc2);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none">+ Add new item</button>';
     curItem=null; return;
   }
   if(res.length===1){showMatch(res[0]);return;}
@@ -911,6 +974,129 @@ function saveCount(){
   resetMatch();
   setTimeout(function(){document.getElementById('scanInput').focus();},150);
 }
+
+// ── ADD NEW ITEM ──────────────────────────────────────────────────────
+// Used when product isn't in inventory. Saves a count entry flagged new_product:true
+// so supervisor knows to add it to PDS after submission.
+function openNewItem(){
+  // Populate PAK dropdown from current inventory's distinct PAKs, sorted
+  var sel=document.getElementById('niPak');
+  // Reset
+  sel.innerHTML='<option value="">— Choose pack —</option>';
+  document.getElementById('niPakOther').style.display='none';
+  document.getElementById('niPakOther').value='';
+  // Distinct PAKs from currently-loaded inventory
+  var paks={};
+  PRODUCTS.forEach(function(p){var pk=String(p.PAK||'').trim();if(pk)paks[pk]=true;});
+  var sorted=Object.keys(paks).sort(function(a,b){
+    // Group by category, then alpha within group
+    var ca=categorizePak(a), cb=categorizePak(b);
+    var order={'Bulk':0,'Drum':1,'Pail':2,'Case':3};
+    if(ca!==cb) return (order[ca]||9)-(order[cb]||9);
+    return a.localeCompare(b);
+  });
+  // Add grouped optgroups for visual clarity
+  var lastCat='';
+  sorted.forEach(function(pk){
+    var cat=categorizePak(pk);
+    if(cat!==lastCat){
+      var og=document.createElement('optgroup');
+      og.label=cat;
+      og.id='niPakOg_'+cat;
+      sel.appendChild(og);
+      lastCat=cat;
+    }
+    var og=document.getElementById('niPakOg_'+cat);
+    var opt=document.createElement('option');
+    opt.value=pk; opt.textContent=pk;
+    og.appendChild(opt);
+  });
+  // Cleanup temp ids
+  ['Bulk','Drum','Pail','Case'].forEach(function(c){
+    var og=document.getElementById('niPakOg_'+c);
+    if(og) og.removeAttribute('id');
+  });
+  // Other option at the very end
+  var otherOpt=document.createElement('option');
+  otherOpt.value='__OTHER__';
+  otherOpt.textContent='Other (custom)…';
+  sel.appendChild(otherOpt);
+
+  // Pre-fill description from scan input or AI parse if available
+  var descEl=document.getElementById('niDesc');
+  if(!descEl.value){
+    var hint=document.getElementById('scanInput').value.trim();
+    if(hint) descEl.value=hint.toUpperCase();
+  }
+
+  // Reset count + show modal
+  document.getElementById('niCount').value='';
+  document.getElementById('newItemModal').style.display='flex';
+  setTimeout(function(){document.getElementById('niProdCode').focus();},100);
+}
+function onNiPakChange(){
+  var v=document.getElementById('niPak').value;
+  document.getElementById('niPakOther').style.display=(v==='__OTHER__')?'block':'none';
+  if(v==='__OTHER__') setTimeout(function(){document.getElementById('niPakOther').focus();},50);
+}
+function cancelNewItem(){
+  document.getElementById('newItemModal').style.display='none';
+}
+function saveNewItem(){
+  var code=document.getElementById('niProdCode').value.trim().toUpperCase();
+  var desc=document.getElementById('niDesc').value.trim().toUpperCase();
+  var pakSel=document.getElementById('niPak').value;
+  var pak=(pakSel==='__OTHER__')
+    ? document.getElementById('niPakOther').value.trim().toUpperCase()
+    : pakSel;
+  var countRaw=document.getElementById('niCount').value;
+  var notes=document.getElementById('niNotes').value.trim();
+  // Validate
+  if(!code){toast('Product code required','w');document.getElementById('niProdCode').focus();return;}
+  if(!desc){toast('Description required','w');document.getElementById('niDesc').focus();return;}
+  if(!pak){toast('Pick a pack','w');document.getElementById('niPak').focus();return;}
+  var n=parseFloat(countRaw);
+  if(countRaw===''||isNaN(n)||n<0){toast('Enter a valid count','w');document.getElementById('niCount').focus();return;}
+  // Build synthetic item — flagged new_product:true for supervisor follow-up
+  var item={
+    PRODUCT: code,
+    PAK: pak,
+    WH: String(selectedWh),
+    DESCRIPTION: desc,
+    BOM: 0,
+    ON_HAND: 0,         // unknown — supervisor will reconcile
+    AVAILABLE: 0,
+    BIN_LOC: '',
+    VENDOR: '',
+    VPROD_CODE: '',
+    OPEN_ORDERS: 0,
+    NEW_PRODUCT: true,
+    NEW_NOTES: notes
+  };
+  var k=code+'|'+pak;
+  if(myLog[k]){
+    if(!confirm('You already counted '+code+' '+pak+' ('+myLog[k].count+'). Overwrite with '+n+'?')) return;
+  }
+  myLog[k]={item:item,count:n,ts:Date.now()};
+  document.getElementById('cnt').textContent=Object.keys(myLog).length;
+  renderMiniLog();
+  pushEntry(k,myLog[k]);
+  toast('Added new item: '+code,'s');
+  // Close modal + clear
+  document.getElementById('newItemModal').style.display='none';
+  document.getElementById('niProdCode').value='';
+  document.getElementById('niDesc').value='';
+  document.getElementById('niPak').value='';
+  document.getElementById('niPakOther').value='';
+  document.getElementById('niPakOther').style.display='none';
+  document.getElementById('niCount').value='';
+  document.getElementById('niNotes').value='';
+  // Hide AI scan panel and reset search
+  document.getElementById('aiResult').style.display='none';
+  document.getElementById('scanInput').value='';
+  resetMatch();
+  setTimeout(function(){document.getElementById('scanInput').focus();},150);
+}
 function renderMiniLog(){
   var ents=Object.keys(myLog).map(function(k){return myLog[k];});
   document.getElementById('eLog').style.display=ents.length?'none':'block';
@@ -929,7 +1115,8 @@ function renderLog(){
   document.getElementById('ltBody').innerHTML=ents.slice().reverse().map(function(e){
     var d=e.count-e.item.ON_HAND, dc=d>0?'dp':d<0?'dn':'dz', ds=d>0?'+'+d:d===0?'—':d;
     var k=e.item.PRODUCT+'|'+e.item.PAK, ks=k.replace(/'/g,"\'");
-    return '<tr><td class="tp">'+e.item.PRODUCT+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+e.count+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="delEntry("+ks+")">&#10005;</button></td></tr>';
+    var newBadge=e.item.NEW_PRODUCT?'<span style="background:var(--acc2);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;margin-left:5px;letter-spacing:.05em">NEW</span>':'';
+    return '<tr><td class="tp">'+e.item.PRODUCT+newBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+e.count+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="delEntry("+ks+")">&#10005;</button></td></tr>';
   }).join('');
 }
 function delEntry(k){
@@ -1265,6 +1452,7 @@ function snapAndIdentify(){
     if(parsed.vendor_code) bits.push('vcode: '+parsed.vendor_code);
     if(dbg.alias) bits.push('→ alias: '+dbg.alias+' ('+dbg.aliasPoolSize+' in pool)');
     if(dbg.isFallback) bits.push('→ FALLBACK (no brand match, showing alternatives)');
+    if(dbg.isWeakMatch) bits.push('→ WEAK (max score '+dbg.maxScore+', no exact line/grade match)');
     bits.push('→ '+allMatches.length+' results');
     if(dbg.top5) bits.push('top-5: '+dbg.top5);
     dbgLine.textContent=bits.join(' · ');
@@ -1274,6 +1462,21 @@ function snapAndIdentify(){
     document.getElementById('airNone').style.display='none';
     // Toggle fallback banner
     document.getElementById('airFallbackBanner').style.display=dbg.isFallback?'block':'none';
+    // Toggle weak-match banner — alias hit but no strong score
+    var weakBanner=document.getElementById('airWeakBanner');
+    if(dbg.isWeakMatch){
+      var queryBits=[];
+      if(parsed.product_line) queryBits.push(parsed.product_line);
+      if(parsed.grade) queryBits.push(parsed.grade);
+      var queryStr = queryBits.length ? '"'+queryBits.join(' ')+'"' : 'this exact product';
+      document.getElementById('airWeakQuery').textContent=queryStr;
+      document.getElementById('airWeakBrand').textContent=parsed.brand||dbg.alias||'similar';
+      weakBanner.style.display='block';
+    } else {
+      weakBanner.style.display='none';
+    }
+    // Show Add-New-Item button at bottom of matches when fallback OR weak — gives counter an out
+    document.getElementById('airAddNewWrap').style.display=(dbg.isFallback||dbg.isWeakMatch)?'block':'none';
     if(!allMatches.length){
       document.getElementById('airNone').style.display='block';
       return;
@@ -1292,25 +1495,25 @@ function renderAiMatches(matches,activeFilter){
   var matchDiv=document.getElementById('airMatches');
   matchDiv.innerHTML='';
   // Filter buttons
-  var filters=['All','Drum','Pail','Case'];
+  var filters=['All','Drum','Pail','Case','Bulk'];
   var fbar=document.createElement('div');
   fbar.style.cssText='display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap';
   filters.forEach(function(f){
     var btn=document.createElement('button');
     btn.textContent=f;
-    btn.style.cssText='padding:5px 12px;border-radius:20px;border:1px solid var(--bdr);background:'+(f===activeFilter?'var(--acc2)':'var(--surf2)')+';color:'+(f===activeFilter?'#fff':'var(--txt)')+';font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation';
+    btn.style.cssText='padding:7px 14px;border-radius:20px;border:1px solid var(--bdr);background:'+(f===activeFilter?'var(--acc2)':'var(--surf2)')+';color:'+(f===activeFilter?'#fff':'var(--txt)')+';font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation';
     btn.onclick=function(){renderAiMatches(matches,f);};
     fbar.appendChild(btn);
   });
   matchDiv.appendChild(fbar);
   // Filter products by pak group
   var filtered=matches;
-  if(activeFilter!=='All'&&PAK_GROUPS[activeFilter]){
-    filtered=matches.filter(function(p){return PAK_GROUPS[activeFilter].indexOf(p.PAK)>=0;});
+  if(activeFilter!=='All'){
+    filtered=matches.filter(function(p){return categorizePak(p.PAK)===activeFilter;});
     if(!filtered.length) filtered=matches; // fallback to all if filter empty
   }
-  // Limit to 15
-  filtered.slice(0,15).forEach(function(p){
+  // Limit to 20 (was 15 — bump per Daniel; may go to 25 if needed)
+  filtered.slice(0,20).forEach(function(p){
     var btn=document.createElement('button');
     btn.className='air-match';
     btn.innerHTML='<div class="air-prod">'+p.PRODUCT+'</div>'
@@ -1399,7 +1602,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v7';",
+    "const CACHE='scl-inv-v9';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
