@@ -206,7 +206,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
     <div style="font-size:18px;font-weight:800;color:var(--acc2);margin-bottom:4px">Add new item</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.45">Use this when the product isn&rsquo;t in inventory yet. Supervisor will be notified to add it after submission.</div>
 
-    <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Product code <span style="color:var(--danger)">*</span></label>
+    <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Product code <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
     <input id="niProdCode" type="text" placeholder="e.g. MOBSHC630" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="30" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:15px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;letter-spacing:.04em;box-sizing:border-box">
 
     <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Description <span style="color:var(--danger)">*</span></label>
@@ -303,10 +303,15 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
           <div class="mmet"><div class="mml">Bin</div><div class="mmv bin" id="mbin"></div></div>
           <div class="mmet"><div class="mml">Open Ord</div><div class="mmv" id="moo"></div></div>
         </div>
+        <div id="prevCountRow" style="display:none;background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);border-radius:6px;padding:8px 12px;margin:8px 0;font-size:12px;color:var(--acc);font-family:var(--mono);line-height:1.5">Previously counted: <b id="prevCountVal" style="font-size:14px"></b><span id="prevCountBreakdown" style="color:var(--muted);font-size:11px;margin-left:6px"></span></div>
         <div class="crow">
           <span class="clbl">Count</span>
-          <input id="ci" type="number" min="0" placeholder="0" inputmode="numeric" pattern="[0-9]*" onkeydown="if(event.keyCode===13){event.preventDefault();saveCount()}">
-          <button id="sv" onclick="saveCount()">SAVE &#8629;</button>
+          <input id="ci" type="number" min="0" placeholder="0" inputmode="numeric" pattern="[0-9]*" onkeydown="if(event.keyCode===13){event.preventDefault();onCountSubmit()}">
+          <button id="sv" onclick="onCountSubmit()">SAVE &#8629;</button>
+        </div>
+        <div id="dualBtnRow" style="display:none;gap:8px;margin-top:8px">
+          <button onclick="saveCountAdd()" style="flex:1;background:var(--acc);color:#000;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">+ Add</button>
+          <button onclick="saveCountReplace()" style="flex:1;background:transparent;color:var(--acc2);border:1px solid var(--acc2);border-radius:8px;padding:11px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">↻ Replace</button>
         </div>
       </div>
     </div>
@@ -383,7 +388,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p3.0 · 2026-04-27';
+var APP_VERSION='p3.1 · 2026-04-27';
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -947,33 +952,79 @@ function showMatch(item){
   document.getElementById('moo').textContent=item.OPEN_ORDERS;
   var k=item.PRODUCT+'|'+item.PAK;
   var ci=document.getElementById('ci');
-  ci.value=myLog[k]?myLog[k].count:'';
+  var prior=myLog[k];
+  var prevRow=document.getElementById('prevCountRow');
+  var singleBtn=document.getElementById('sv');
+  var dualRow=document.getElementById('dualBtnRow');
+  if(prior){
+    // Re-scan: blank input, show previously row, swap to Add/Replace pair
+    ci.value='';
+    document.getElementById('prevCountVal').textContent=prior.count;
+    var adds=prior.additions||[];
+    var bd=document.getElementById('prevCountBreakdown');
+    bd.textContent=(adds.length>1)?'('+adds.join('+')+')':'';
+    prevRow.style.display='block';
+    singleBtn.style.display='none';
+    dualRow.style.display='flex';
+  } else {
+    // First scan: blank input, single Save button
+    ci.value='';
+    prevRow.style.display='none';
+    singleBtn.style.display='';
+    dualRow.style.display='none';
+  }
   setTimeout(function(){ci.focus();},100);
 }
 function resetMatch(){
   document.getElementById('mc').style.display='none';
   document.getElementById('ml').style.display='none';
+  document.getElementById('prevCountRow').style.display='none';
+  document.getElementById('dualBtnRow').style.display='none';
+  document.getElementById('sv').style.display='';
   curItem=null;
 }
 
 // ── SAVE ──────────────────────────────────────────────────────────────
-function saveCount(){
+// onCountSubmit is the single-button path (no prior count). Routes to replace.
+function onCountSubmit(){ saveCountReplace(); }
+
+// Internal — performs the save. mode='replace' or 'add'.
+function _doSaveCount(mode){
   if(!curItem)return;
   var raw=document.getElementById('ci').value;
   var n=parseInt(raw,10);
   if(raw===''||isNaN(n)){toast('Enter a count value','w');return;}
   var k=curItem.PRODUCT+'|'+curItem.PAK;
-  var upd=!!myLog[k];
-  myLog[k]={item:curItem,count:n,ts:Date.now()};
+  var prior=myLog[k];
+  var newTotal=n;
+  var additions=[n];
+  var actionLabel='Saved';
+  if(prior){
+    if(mode==='add'){
+      newTotal=(prior.count||0)+n;
+      additions=(prior.additions||[prior.count||0]).concat([n]);
+      actionLabel='Added';
+    } else {
+      // Replace
+      newTotal=n;
+      additions=[n]; // reset history
+      actionLabel='Replaced';
+    }
+  }
+  myLog[k]={item:curItem,count:newTotal,ts:Date.now(),additions:additions};
   document.getElementById('cnt').textContent=Object.keys(myLog).length;
   renderMiniLog();
   pushEntry(k,myLog[k]);
-  toast((upd?'Updated: ':'Saved: ')+curItem.PRODUCT);
+  toast(actionLabel+': '+curItem.PRODUCT+' = '+newTotal);
   document.getElementById('scanInput').value='';
   document.getElementById('ci').value='';
   resetMatch();
   setTimeout(function(){document.getElementById('scanInput').focus();},150);
 }
+function saveCountReplace(){ _doSaveCount('replace'); }
+function saveCountAdd(){ _doSaveCount('add'); }
+// Legacy alias — anywhere old code calls saveCount() still works
+function saveCount(){ _doSaveCount('replace'); }
 
 // ── ADD NEW ITEM ──────────────────────────────────────────────────────
 // Used when product isn't in inventory. Saves a count entry flagged new_product:true
@@ -1022,17 +1073,67 @@ function openNewItem(){
   otherOpt.textContent='Other (custom)…';
   sel.appendChild(otherOpt);
 
-  // Pre-fill description from scan input or AI parse if available
-  var descEl=document.getElementById('niDesc');
-  if(!descEl.value){
+  // Reset all fields first
+  document.getElementById('niProdCode').value='';
+  document.getElementById('niDesc').value='';
+  document.getElementById('niCount').value='';
+  document.getElementById('niNotes').value='';
+  sel.value='';
+  sel.style.boxShadow='';
+
+  // Prefill from AI parse if available (verbatim — counter trims if needed)
+  var ai=window._lastAiParsed;
+  var aiPrefilled=false;
+  if(ai && (ai.brand || ai.product_line || ai.grade)){
+    var descBits=[];
+    if(ai.brand) descBits.push(ai.brand);
+    if(ai.product_line && (!ai.brand || ai.product_line.toUpperCase().indexOf(ai.brand.toUpperCase())<0)){
+      descBits.push(ai.product_line);
+    } else if(ai.product_line){
+      descBits.push(ai.product_line);
+    }
+    if(ai.grade && ai.grade.toLowerCase().indexOf('not applicable')<0 && ai.grade.toLowerCase()!=='n/a'){
+      descBits.push(ai.grade);
+    }
+    document.getElementById('niDesc').value=descBits.join(' ').toUpperCase().replace(/\s+/g,' ').trim();
+    if(ai.vendor_code){
+      document.getElementById('niNotes').value='Vendor #: '+ai.vendor_code;
+    }
+    aiPrefilled=true;
+  } else {
+    // Fallback to scan input text if user typed something
     var hint=document.getElementById('scanInput').value.trim();
-    if(hint) descEl.value=hint.toUpperCase();
+    if(hint) document.getElementById('niDesc').value=hint.toUpperCase();
   }
 
-  // Reset count + show modal
-  document.getElementById('niCount').value='';
+  // Show modal
   document.getElementById('newItemModal').style.display='flex';
-  setTimeout(function(){document.getElementById('niProdCode').focus();},100);
+
+  // If AI prefilled, lightly highlight the pak dropdown to draw attention
+  // (counter has to pick one — AI cannot reliably read pack size from labels)
+  if(aiPrefilled){
+    sel.style.boxShadow='0 0 0 2px rgba(0,212,170,.45)';
+    sel.style.transition='box-shadow .25s ease';
+    // Focus the pak dropdown — counter's next required action
+    setTimeout(function(){sel.focus();},150);
+    // Fade highlight after 6s if untouched
+    setTimeout(function(){
+      if(!sel.value) sel.style.boxShadow='0 0 0 1px rgba(0,212,170,.25)';
+    },6000);
+    // Listener: clear highlight on first interaction
+    var clearHighlight=function(){
+      sel.style.boxShadow='';
+      sel.removeEventListener('change',clearHighlight);
+      sel.removeEventListener('focus',clearHighlight);
+    };
+    sel.addEventListener('change',clearHighlight);
+  } else {
+    // No prefill — focus product code as the natural starting field
+    setTimeout(function(){document.getElementById('niProdCode').focus();},100);
+  }
+
+  // Clear stashed AI parse so it doesn't leak into a later text-search no-match
+  window._lastAiParsed=null;
 }
 function onNiPakChange(){
   var v=document.getElementById('niPak').value;
@@ -1051,20 +1152,19 @@ function saveNewItem(){
     : pakSel;
   var countRaw=document.getElementById('niCount').value;
   var notes=document.getElementById('niNotes').value.trim();
-  // Validate
-  if(!code){toast('Product code required','w');document.getElementById('niProdCode').focus();return;}
+  // Validate — product code is OPTIONAL per Daniel; description, pak, count required
   if(!desc){toast('Description required','w');document.getElementById('niDesc').focus();return;}
   if(!pak){toast('Pick a pack','w');document.getElementById('niPak').focus();return;}
   var n=parseFloat(countRaw);
   if(countRaw===''||isNaN(n)||n<0){toast('Enter a valid count','w');document.getElementById('niCount').focus();return;}
   // Build synthetic item — flagged new_product:true for supervisor follow-up
   var item={
-    PRODUCT: code,
+    PRODUCT: code,                 // may be empty
     PAK: pak,
     WH: String(selectedWh),
     DESCRIPTION: desc,
     BOM: 0,
-    ON_HAND: 0,         // unknown — supervisor will reconcile
+    ON_HAND: 0,
     AVAILABLE: 0,
     BIN_LOC: '',
     VENDOR: '',
@@ -1073,15 +1173,38 @@ function saveNewItem(){
     NEW_PRODUCT: true,
     NEW_NOTES: notes
   };
-  var k=code+'|'+pak;
-  if(myLog[k]){
-    if(!confirm('You already counted '+code+' '+pak+' ('+myLog[k].count+'). Overwrite with '+n+'?')) return;
+  // Build dedup key:
+  //   - If product code provided: PRODUCT|PAK (collision check works)
+  //   - If empty: synthetic per-entry key based on timestamp so multiple no-code items don't overwrite
+  var k;
+  if(code){
+    k=code+'|'+pak;
+  } else {
+    // Synthetic key — unique per save; description+pak+timestamp keeps it human-readable in dev tools
+    k='__NEW__|'+pak+'|'+desc.substring(0,20)+'|'+Date.now();
   }
-  myLog[k]={item:item,count:n,ts:Date.now()};
+  // Collision handling for explicit codes only
+  if(code && myLog[k]){
+    var prior=myLog[k];
+    var msg='You already counted '+code+' '+pak+' (current: '+prior.count+').\n\nOK = Add '+n+' (new total '+(prior.count+n)+')\nCancel = Replace with '+n;
+    if(confirm(msg)){
+      // Add
+      var newTotal=(prior.count||0)+n;
+      var additions=(prior.additions||[prior.count||0]).concat([n]);
+      myLog[k]={item:item,count:newTotal,ts:Date.now(),additions:additions};
+      toast('Added: '+code+' = '+newTotal,'s');
+    } else {
+      // Replace
+      myLog[k]={item:item,count:n,ts:Date.now(),additions:[n]};
+      toast('Replaced: '+code+' = '+n,'s');
+    }
+  } else {
+    myLog[k]={item:item,count:n,ts:Date.now(),additions:[n]};
+    toast('Added new item: '+(code||'(no code)'),'s');
+  }
   document.getElementById('cnt').textContent=Object.keys(myLog).length;
   renderMiniLog();
   pushEntry(k,myLog[k]);
-  toast('Added new item: '+code,'s');
   // Close modal + clear
   document.getElementById('newItemModal').style.display='none';
   document.getElementById('niProdCode').value='';
@@ -1104,7 +1227,10 @@ function renderMiniLog(){
   t.style.display=ents.length?'table':'none';
   document.getElementById('mlBody').innerHTML=ents.slice().reverse().slice(0,6).map(function(e){
     var k=e.item.PRODUCT+'|'+e.item.PAK, ks=k.replace(/'/g,"\'");
-    return '<tr><td class="tp">'+e.item.PRODUCT+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td class="tc">'+e.count+'</td><td class="toh">'+e.item.ON_HAND+'</td><td><button class="xbtn" onclick="delEntry("+ks+")">&#10005;</button></td></tr>';
+    var adds=e.additions||[];
+    var countDisp=e.count;
+    if(adds.length>1) countDisp=e.count+'<span style="color:var(--muted);font-size:9px;margin-left:3px">×'+adds.length+'</span>';
+    return '<tr><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td><button class="xbtn" onclick="delEntry("+ks+")">&#10005;</button></td></tr>';
   }).join('');
 }
 function renderLog(){
@@ -1116,7 +1242,11 @@ function renderLog(){
     var d=e.count-e.item.ON_HAND, dc=d>0?'dp':d<0?'dn':'dz', ds=d>0?'+'+d:d===0?'—':d;
     var k=e.item.PRODUCT+'|'+e.item.PAK, ks=k.replace(/'/g,"\'");
     var newBadge=e.item.NEW_PRODUCT?'<span style="background:var(--acc2);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;margin-left:5px;letter-spacing:.05em">NEW</span>':'';
-    return '<tr><td class="tp">'+e.item.PRODUCT+newBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+e.count+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="delEntry("+ks+")">&#10005;</button></td></tr>';
+    // Multi-add breakdown — show "total (a+b+c)" only when there are 2+ additions
+    var adds=e.additions||[];
+    var countDisp=e.count;
+    if(adds.length>1) countDisp=e.count+' <span style="color:var(--muted);font-size:10px">('+adds.join('+')+')</span>';
+    return '<tr><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+newBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="delEntry("+ks+")">&#10005;</button></td></tr>';
   }).join('');
 }
 function delEntry(k){
@@ -1438,6 +1568,7 @@ function snapAndIdentify(){
     }
     var clean=text.replace(/```json|```/g,'').trim();
     var parsed=JSON.parse(clean);
+    window._lastAiParsed=parsed;  // stashed for openNewItem prefill
     var reasoningEl=document.getElementById('airReasoning');
     reasoningEl.textContent=parsed.reasoning||'';
     var allMatches=aiSearch(parsed);
@@ -1602,7 +1733,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v9';",
+    "const CACHE='scl-inv-v10';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
