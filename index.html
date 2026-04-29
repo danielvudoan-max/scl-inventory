@@ -354,14 +354,30 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
     <div style="font-size:26px;margin-bottom:8px">📤</div>
     <div style="font-weight:900;font-size:18px;color:var(--acc);margin-bottom:6px">Submit Count</div>
     <div id="submitInfo" style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6"></div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;background:var(--surf2);border-radius:8px;padding:10px">
-      <b style="color:var(--txt)">Two quick steps:</b><br>
-      1. Download your CSV file<br>
-      2. Send the email (attach the CSV)
+
+    <!-- PRIMARY: cloud submit -->
+    <button id="cloudSubmitBtn" onclick="doCloudSubmit()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:800;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;touch-action:manipulation">✓ Submit to SCL Server</button>
+
+    <!-- Status line under primary button (errors, success spinner text) -->
+    <div id="cloudSubmitStatus" style="display:none;font-size:12px;line-height:1.5;margin-bottom:12px;padding:10px;border-radius:8px"></div>
+
+    <!-- FALLBACK: shown by default as a small link, expanded on failure -->
+    <div id="fallbackWrap" style="margin-top:6px;border-top:1px solid var(--bdr);padding-top:12px">
+      <div id="fallbackToggle" style="text-align:center;margin-bottom:8px">
+        <a href="javascript:void(0)" onclick="toggleFallback()" id="fallbackLink" style="color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer">Network down? Use offline backup ▾</a>
+      </div>
+      <div id="fallbackBody" style="display:none">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;background:var(--surf2);border-radius:8px;padding:10px">
+          <b style="color:var(--txt)">Two quick steps:</b><br>
+          1. Download your CSV file<br>
+          2. Send the email (attach the CSV)
+        </div>
+        <button onclick="doSubmitStep1()" style="width:100%;background:var(--surf2);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:12px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:8px">Step 1: Download CSV</button>
+        <button id="step2btn" onclick="doSubmitStep2()" style="width:100%;background:var(--surf2);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:12px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;opacity:.5" disabled>Step 2: Open Email</button>
+      </div>
     </div>
-    <button onclick="doSubmitStep1()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px">Step 1: Download CSV</button>
-    <button id="step2btn" onclick="doSubmitStep2()" style="width:100%;background:var(--acc2);color:#fff;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;opacity:.5" disabled>Step 2: Open Email</button>
-    <button onclick="closeSubmit()" style="width:100%;background:var(--surf2);color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none">Cancel</button>
+
+    <button onclick="closeSubmit()" style="width:100%;background:var(--surf2);color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-top:6px">Cancel</button>
   </div>
 </div>
 <div id="camDenied" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9998;padding:24px;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center">
@@ -385,7 +401,9 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p3.2 · 2026-04-29';
+var APP_VERSION='p3.3 · 2026-04-29';
+var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
+var SUBMIT_TIMEOUT_MS=15000;
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -1695,19 +1713,184 @@ function renderAiMatches(matches,activeFilter){
 
 // ── SUBMIT COUNT ──────────────────────────────────────────────────────
 var step1Done=false;
+var cloudSubmitting=false;
 function openSubmit(){
   var ents=Object.keys(myLog).length;
   if(!ents){toast('No counts to submit','w');return;}
   step1Done=false;
   var step2=document.getElementById('step2btn');
   step2.disabled=true; step2.style.opacity='.5';
+  // Reset cloud submit UI
+  cloudSubmitting=false;
+  resetCloudBtn();
+  document.getElementById('cloudSubmitStatus').style.display='none';
+  document.getElementById('fallbackBody').style.display='none';
+  document.getElementById('fallbackLink').textContent='Network down? Use offline backup ▾';
   document.getElementById('submitInfo').innerHTML=
     '<b style="color:var(--txt)">'+workerName+'</b> &nbsp;|&nbsp; <b style="color:var(--acc)">'+ents+'</b> items counted<br>'+
     'Date: '+new Date().toLocaleDateString();
   document.getElementById('submitModal').className='open';
 }
 function closeSubmit(){
+  if(cloudSubmitting)return;  // don't allow close mid-submit
   document.getElementById('submitModal').className='';
+}
+function toggleFallback(){
+  var body=document.getElementById('fallbackBody');
+  var link=document.getElementById('fallbackLink');
+  if(body.style.display==='none'){
+    body.style.display='block';
+    link.textContent='Hide offline backup ▴';
+  } else {
+    body.style.display='none';
+    link.textContent='Network down? Use offline backup ▾';
+  }
+}
+function resetCloudBtn(){
+  var b=document.getElementById('cloudSubmitBtn');
+  b.disabled=false;
+  b.style.opacity='1';
+  b.style.cursor='pointer';
+  b.innerHTML='✓ Submit to SCL Server';
+}
+function setCloudStatus(kind,html){
+  var s=document.getElementById('cloudSubmitStatus');
+  s.style.display='block';
+  if(kind==='err'){
+    s.style.background='rgba(255,59,48,.1)';
+    s.style.border='1px solid rgba(255,59,48,.35)';
+    s.style.color='var(--danger)';
+  } else if(kind==='ok'){
+    s.style.background='rgba(0,212,170,.1)';
+    s.style.border='1px solid rgba(0,212,170,.35)';
+    s.style.color='var(--acc)';
+  } else {
+    s.style.background='var(--surf2)';
+    s.style.border='1px solid var(--bdr)';
+    s.style.color='var(--muted)';
+  }
+  s.innerHTML=html;
+}
+// Build the items[] payload from myLog. Each entry becomes one item.
+function buildSubmitItems(){
+  return Object.keys(myLog).map(function(k){
+    var e=myLog[k];
+    var it=e.item||{};
+    var adds=(e.additions&&e.additions.length)?e.additions.slice():[e.count];
+    return {
+      prodcode: it.PRODUCT||null,
+      pak: it.PAK||null,
+      description: it.DESCRIPTION||'',
+      vendor: it.VENDOR||null,
+      vpcode: it.VPROD_CODE||null,
+      count: e.count,
+      is_new: !!it.NEW_PRODUCT,
+      additions: adds,
+      // Extra audit fields — Worker stores items as-is so these come along for free
+      on_hand: (typeof it.ON_HAND==='number')?it.ON_HAND:null,
+      bin_loc: it.BIN_LOC||null,
+      new_notes: it.NEW_NOTES||null,
+      ts: e.ts||null
+    };
+  });
+}
+function doCloudSubmit(){
+  if(cloudSubmitting)return;
+  var ents=Object.keys(myLog).length;
+  if(!ents){toast('No counts to submit','w');return;}
+  if(!selectedWh){toast('No warehouse selected','e');return;}
+  var whNum=parseInt(String(selectedWh).replace(/^WH/i,''),10);
+  if(isNaN(whNum)){toast('Bad warehouse value','e');return;}
+
+  cloudSubmitting=true;
+  var btn=document.getElementById('cloudSubmitBtn');
+  btn.disabled=true;
+  btn.style.opacity='.7';
+  btn.style.cursor='wait';
+  btn.innerHTML='⏳ Submitting…';
+  setCloudStatus('info','Sending '+ents+' item'+(ents===1?'':'s')+' to server…');
+
+  var payload={
+    warehouse: whNum,
+    counter: workerName,
+    submitted_at: new Date().toISOString(),
+    app_version: APP_VERSION,
+    items: buildSubmitItems()
+  };
+
+  // 15s timeout via AbortController
+  var ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+  var timedOut=false;
+  var to=setTimeout(function(){
+    timedOut=true;
+    if(ctl) try{ctl.abort();}catch(e){}
+  }, SUBMIT_TIMEOUT_MS);
+
+  fetch(SUBMIT_ENDPOINT, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload),
+    signal: ctl?ctl.signal:undefined
+  }).then(function(r){
+    clearTimeout(to);
+    return r.text().then(function(txt){
+      var data=null;
+      try{ data=JSON.parse(txt); }catch(e){}
+      if(!r.ok){
+        var msg='Server returned '+r.status;
+        if(data&&data.error)msg+=': '+data.error;
+        throw new Error(msg);
+      }
+      if(!data||data.ok!==true){
+        throw new Error((data&&data.error)?data.error:'Server did not confirm save');
+      }
+      return data;
+    });
+  }).then(function(data){
+    // SUCCESS — clear myLog + persisted entries, close modal
+    var n=(data&&data.item_count)||ents;
+    cloudSubmitting=false;
+    var ks=Object.keys(myLog);
+    myLog={};
+    document.getElementById('cnt').textContent=0;
+    renderMiniLog(); renderLog();
+    ks.forEach(function(k){ try{store.del('e_'+skey(k));}catch(e){} });
+    // Hide submit button (no entries left to submit)
+    var sb=document.getElementById('submitBtn');
+    if(sb) sb.style.display='none';
+    setCloudStatus('ok','✓ Saved '+n+' item'+(n===1?'':'s')+' to server.');
+    toast('Submitted — count saved to server','s');
+    // Auto-close after a beat so the user sees the confirmation
+    setTimeout(function(){
+      document.getElementById('submitModal').className='';
+    }, 1200);
+  }).catch(function(err){
+    clearTimeout(to);
+    cloudSubmitting=false;
+    resetCloudBtn();
+    var reason;
+    if(timedOut){
+      reason='Request timed out after '+(SUBMIT_TIMEOUT_MS/1000)+'s.';
+    } else if(err&&err.name==='AbortError'){
+      reason='Request was aborted.';
+    } else if(err&&err.message){
+      reason=err.message;
+    } else {
+      reason='Network error.';
+    }
+    setCloudStatus('err',
+      '<b>Submit failed.</b> '+reason+'<br>'+
+      '<span style="color:var(--muted)">Your counts are still saved locally — try again, or use offline backup below.</span>'
+    );
+    // Auto-expand the fallback so the user sees CSV/email immediately
+    var body=document.getElementById('fallbackBody');
+    var link=document.getElementById('fallbackLink');
+    if(body.style.display==='none'){
+      body.style.display='block';
+      link.textContent='Hide offline backup ▴';
+    }
+    toast('Submit failed — use offline backup','e');
+  });
 }
 function doSubmitStep1(){
   var d=new Date();
@@ -1750,10 +1933,12 @@ function doSubmitStep2(){
   var d=new Date();
   var ds=(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0')+'-'+d.getFullYear();
   var ents=Object.keys(myLog).length;
-  var subject='SCL Inventory Count — '+workerName+' — '+ds;
+  var whTag=selectedWh?(' — WH'+selectedWh):'';
+  var subject='SCL Inventory Count'+whTag+' — '+workerName+' — '+ds+' (offline backup)';
   var body='Hi,%0A%0A'
-    +'Please find my inventory count attached.%0A%0A'
+    +'Submitting this count by email — server submit was unavailable.%0A%0A'
     +'Counter: '+encodeURIComponent(workerName)+'%0A'
+    +'Warehouse: '+(selectedWh?('WH'+selectedWh):'(unknown)')+'%0A'
     +'Date: '+ds+'%0A'
     +'Items counted: '+ents+'%0A%0A'
     +'Attach the CSV file that was just downloaded, then send.%0A%0A'
@@ -1768,7 +1953,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v11';",
+    "const CACHE='scl-inv-v12';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
