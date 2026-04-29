@@ -251,7 +251,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   <div class="szn">
     <div class="sinp-wrap">
       <span class="sico">&#9655;</span>
-      <input id="scanInput" type="text" placeholder="Scan or type product code..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="onScanInput()" onkeydown="if(event.keyCode===13){event.preventDefault();doSearch(this.value.trim())}">
+      <input id="scanInput" type="text" placeholder="Scan or type product code..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" onfocus="armScanDismiss()" oninput="onScanInput()" onkeydown="if(event.keyCode===13){event.preventDefault();doSearch(this.value.trim())}">
     </div>
     <button class="cambtn" id="cambtn" onclick="toggleCamera()" style="display:none">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -282,12 +282,9 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
       <div id="airFallbackBanner" style="display:none;background:rgba(255,149,0,.12);border:1px solid rgba(255,149,0,.4);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12px;color:var(--warn);line-height:1.45">⚠ <b>Best alternatives</b> — exact brand not found in inventory. These are description-text matches; verify before saving.</div>
       <div id="airWeakBanner" style="display:none;background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.3);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12px;color:#ffd060;line-height:1.45"><b>No exact match</b> for <span id="airWeakQuery"></span>. Showing other <span id="airWeakBrand"></span> products in inventory — your item may not be stocked yet.</div>
       <div class="air-matches" id="airMatches"></div>
+      <div id="airNoneMsg" style="display:none;text-align:center;margin-bottom:12px">No confident match found.</div>
       <div id="airAddNewWrap" style="display:none;margin-top:8px;padding-top:10px;border-top:1px dashed var(--bdr)">
-        <button onclick="openNewItem()" style="width:100%;background:transparent;color:var(--acc2);border:1px solid var(--acc2);border-radius:8px;padding:10px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">+ My item isn&rsquo;t here — add new</button>
-      </div>
-      <div class="air-none" id="airNone" style="display:none;text-align:center">
-        <div style="margin-bottom:12px">No confident match found.</div>
-        <button onclick="openNewItem()" style="width:100%;background:var(--acc2);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">+ Add new item not in inventory</button>
+        <button id="airAddNewBtn" onclick="openNewItem()" style="width:100%;border-radius:8px;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;font-family:var(--sans)"></button>
       </div>
     </div>
     <div id="ml"></div>
@@ -388,7 +385,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p3.1 · 2026-04-27';
+var APP_VERSION='p3.2 · 2026-04-29';
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -907,7 +904,18 @@ function switchTab(t){
 }
 
 // ── SCAN INPUT ────────────────────────────────────────────────────────
+// Dismissal II: arm on focus of scan input; dismiss AI panel on first keystroke.
+// Focus alone won't dismiss (protects against accidental taps); requires a real input event.
+var _scanDismissArmed=false;
+function armScanDismiss(){ _scanDismissArmed=true; }
+function dismissAiPanelIfArmed(){
+  if(!_scanDismissArmed) return;
+  _scanDismissArmed=false;
+  var res=document.getElementById('aiResult');
+  if(res&&res.style.display==='block'){ res.style.display='none'; }
+}
 function onScanInput(){
+  dismissAiPanelIfArmed();
   clearTimeout(scanTimer);
   var v=document.getElementById('scanInput').value.trim();
   if(!v){resetMatch();return;}
@@ -1497,6 +1505,24 @@ function showCamDenied(){
 // ── AI PHOTO SCAN ─────────────────────────────────────────────────────
 var PROXY_URL='https://scl-api-proxy.danielvudoan.workers.dev';
 var photoStream=null;
+// Single adaptive Add-New button. State:
+//   'hidden'        — confident matches, no fallback/weak — hide entirely
+//   'alternatives'  — fallback/weak with results — outlined "+ My item isn't here — add new"
+//   'empty'         — zero results — solid blue "+ Add new item not in inventory"
+function setAddNewBtn(state){
+  var wrap=document.getElementById('airAddNewWrap');
+  var btn=document.getElementById('airAddNewBtn');
+  if(!wrap||!btn) return;
+  if(state==='hidden'){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  if(state==='empty'){
+    btn.style.cssText='width:100%;background:var(--acc2);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation';
+    btn.innerHTML='+ Add new item not in inventory';
+  } else { // 'alternatives'
+    btn.style.cssText='width:100%;background:transparent;color:var(--acc2);border:1px solid var(--acc2);border-radius:8px;padding:10px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation';
+    btn.innerHTML='+ My item isn\u2019t here \u2014 add new';
+  }
+}
 function togglePhotoScan(){
   if(photoStream){closePhotoScan();return;}
   var btn=document.getElementById('aibtn');
@@ -1539,9 +1565,11 @@ function snapAndIdentify(){
   // Show thinking state
   var res=document.getElementById('aiResult');
   res.style.display='block';
+  _scanDismissArmed=false;
   document.getElementById('airReasoning').innerHTML='<span class="thinking-dots">Identifying product</span>';
   document.getElementById('airMatches').innerHTML='';
-  document.getElementById('airNone').style.display='none';
+  document.getElementById('airNoneMsg').style.display='none';
+  setAddNewBtn('hidden');
   // Build product list summary for context (first 200 products to keep prompt small)
   fetch(PROXY_URL,{
     method:'POST',
@@ -1590,12 +1618,13 @@ function snapAndIdentify(){
     reasoningEl.appendChild(dbgLine);
     var matchDiv=document.getElementById('airMatches');
     matchDiv.innerHTML='';
-    document.getElementById('airNone').style.display='none';
-    // Toggle fallback banner
-    document.getElementById('airFallbackBanner').style.display=dbg.isFallback?'block':'none';
+    document.getElementById('airNoneMsg').style.display='none';
+    var hasResults=allMatches.length>0;
+    // Toggle fallback banner — only when we actually have alternatives to caveat
+    document.getElementById('airFallbackBanner').style.display=(dbg.isFallback&&hasResults)?'block':'none';
     // Toggle weak-match banner — alias hit but no strong score
     var weakBanner=document.getElementById('airWeakBanner');
-    if(dbg.isWeakMatch){
+    if(dbg.isWeakMatch&&hasResults){
       var queryBits=[];
       if(parsed.product_line) queryBits.push(parsed.product_line);
       if(parsed.grade) queryBits.push(parsed.grade);
@@ -1606,17 +1635,23 @@ function snapAndIdentify(){
     } else {
       weakBanner.style.display='none';
     }
-    // Show Add-New-Item button at bottom of matches when fallback OR weak — gives counter an out
-    document.getElementById('airAddNewWrap').style.display=(dbg.isFallback||dbg.isWeakMatch)?'block':'none';
-    if(!allMatches.length){
-      document.getElementById('airNone').style.display='block';
+    // Single Add-New button — empty (solid) when no results, alternatives (outlined) when fallback/weak
+    if(!hasResults){
+      document.getElementById('airNoneMsg').style.display='block';
+      setAddNewBtn('empty');
       return;
+    }
+    if(dbg.isFallback||dbg.isWeakMatch){
+      setAddNewBtn('alternatives');
+    } else {
+      setAddNewBtn('hidden');
     }
     // Render with pak filter
     renderAiMatches(allMatches,'All');
   }).catch(function(e){
     document.getElementById('airReasoning').textContent='Error: '+e.message;
-    document.getElementById('airNone').style.display='block';
+    document.getElementById('airNoneMsg').style.display='block';
+    setAddNewBtn('empty');
     toast('AI scan failed — try again','e');
   });
 }
@@ -1733,7 +1768,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v10';",
+    "const CACHE='scl-inv-v11';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
