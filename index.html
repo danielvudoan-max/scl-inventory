@@ -401,7 +401,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p3.3 · 2026-04-29';
+var APP_VERSION='p3.4 · 2026-05-04';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
@@ -417,6 +417,13 @@ var store = {
   del: function(k){ return _storeOp('del',k); },
   list: function(p){ return _storeOp('list',p); }
 };
+// p3.4 — warehouse+worker-scoped entry keys.
+// OLD format: e_<PRODUCT_PAK>                       (cross-contaminates across WH/workers)
+// NEW format: e_<wh>_<normWorker>_<PRODUCT_PAK>     (isolated per session context)
+// normWorker = lowercase, alphanumeric only — matches "Daniel Doan" === "daniel doan"
+function normWorker(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function entryKeyPrefix(wh, worker){ return 'e_' + String(wh) + '_' + normWorker(worker) + '_'; }
+function entryKey(wh, worker, k){ return entryKeyPrefix(wh, worker) + skey(k); }
 function _storeOp(op,k,v){
   return new Promise(function(res){
     var sk = PFX+k;
@@ -882,11 +889,115 @@ function confirmWh(){
     badge.style.display='inline-block';
     document.getElementById('submitBtn').style.display='block';
     showOfflineBanner(false);
-    startSync();
-    toast(count+' items loaded for WH'+wh,'s');
-    setTimeout(function(){document.getElementById('scanInput').focus();},300);
+    // p3.4 — restore any persisted entries for THIS (wh, worker) before sync starts.
+    // This is the fix for the "app reset on background eviction" data-loss bug.
+    return restoreMyLog(wh, n).then(function(restored){
+      startSync();
+      toast(count+' items loaded for WH'+wh + (restored>0 ? ' · '+restored+' recovered' : ''),'s');
+      if(restored>0){
+        // Make sure the submit button is visible since we have entries
+        document.getElementById('submitBtn').style.display='block';
+      }
+      setTimeout(function(){document.getElementById('scanInput').focus();},300);
+    });
   }).catch(function(e){
     toast('Could not load WH'+wh+': '+(e.message||e),'e');
+  });
+}
+
+// p3.4 — restore myLog from persisted entries for the active (wh, worker).
+// Returns a Promise<number> of entries restored. Also cleans up old-format
+// orphan keys (e_PRODUCT_PAK without wh/worker scoping) since they belong
+// to no known session — they were either already submitted or are stale.
+function restoreMyLog(wh, worker){
+  return new Promise(function(resolve){
+    store.list('e_').then(function(r){
+      if(!r || !r.keys || !r.keys.length){ resolve(0); return; }
+      var prefix = entryKeyPrefix(wh, worker);  // includes 'e_<wh>_<normWorker>_'
+      var fullPrefix = PFX + prefix;            // store layer adds PFX
+      var fullOldPrefix = PFX + 'e_';
+      var matches = [];   // for THIS session
+      var orphans = [];   // old-format keys to clean up
+
+      r.keys.forEach(function(rawKey){
+        // store.list returns keys WITH the PFX prefix already attached
+        var key = (typeof rawKey === 'string') ? rawKey : rawKey.name;
+        if(key.indexOf(fullPrefix) === 0){
+          matches.push(key.substring(PFX.length));  // strip PFX, keep e_<wh>_<worker>_<skey>
+        } else if(key.indexOf(fullOldPrefix) === 0){
+          // Anything else starting with e_. Distinguish:
+          //   (a) ANOTHER session's scoped key like e_4_mike_WIDGET_EA — leave alone
+          //   (b) An old pre-p3.4 key like e_DDELC50A_55D — clean up
+          // Test for new-format shape: e_<digits>_<lowercase-alnum>_<rest>
+          var rest = key.substring(PFX.length + 2);  // strip 'PFX' and 'e_'
+          if(/^\d+_[a-z0-9]+_/.test(rest)){
+            // (a) — another session's scoped data, do nothing
+          } else {
+            // (b) — old-format orphan, safe to clean up
+            orphans.push(key.substring(PFX.length));
+          }
+        }
+      });
+
+      // Clean up orphans (fire-and-forget; don't block on them)
+      orphans.forEach(function(k){ try{ store.del(k); }catch(e){} });
+
+      if(!matches.length){ resolve(0); return; }
+
+      // Fetch each matching entry and rebuild myLog
+      var todo = matches.map(function(k){
+        return store.get(k).then(function(raw){
+          if(!raw) return null;
+          try {
+            var d = JSON.parse(raw);
+            // Look up product in PRODUCTS to get current item metadata
+            var item = null;
+            for(var i=0;i<PRODUCTS.length;i++){
+              if(PRODUCTS[i].PRODUCT === d.product && PRODUCTS[i].PAK === (d.pak||'')){
+                item = PRODUCTS[i]; break;
+              }
+            }
+            // If product not found in current inventory — could be a NEW_PRODUCT
+            // entry, or template changed since the original scan. Reconstruct
+            // a synthetic item from the persisted snapshot so we don't lose data.
+            if(!item){
+              item = {
+                PRODUCT: d.product,
+                PAK: d.pak || '',
+                WH: String(wh),
+                DESCRIPTION: d.description || '',
+                BOM: d.bom != null ? d.bom : 0,
+                ON_HAND: Number(d.on_hand)||0,
+                AVAILABLE: Number(d.on_hand)||0,
+                BIN_LOC: d.bin_loc || '',
+                VENDOR: d.vendor || '',
+                VPROD_CODE: d.vpcode || '',
+                OPEN_ORDERS: 0,
+                NEW_PRODUCT: !!d.is_new,
+                NEW_NOTES: d.new_notes || null
+              };
+            }
+            var mk = (item.PRODUCT || d.product) + '|' + (item.PAK || d.pak || '');
+            myLog[mk] = {
+              item: item,
+              count: Number(d.count)||0,
+              ts: d.ts || Date.now(),
+              additions: Array.isArray(d.additions) && d.additions.length ? d.additions : [Number(d.count)||0]
+            };
+          } catch(e){ /* skip unparseable */ }
+        });
+      });
+
+      Promise.all(todo).then(function(){
+        var n = Object.keys(myLog).length;
+        if(n > 0){
+          document.getElementById('cnt').textContent = n;
+          renderMiniLog();
+          renderLog();
+        }
+        resolve(n);
+      });
+    }).catch(function(){ resolve(0); });
   });
 }
 function startSupervisor(){
@@ -1279,7 +1390,7 @@ function delEntry(k){
   delete myLog[k];
   document.getElementById('cnt').textContent=Object.keys(myLog).length;
   renderMiniLog(); renderLog();
-  store.del('e_'+skey(k));
+  store.del(entryKey(selectedWh, workerName, k));
 }
 function clearLog(){
   if(!Object.keys(myLog).length)return;
@@ -1288,15 +1399,22 @@ function clearLog(){
   myLog={};
   document.getElementById('cnt').textContent=0;
   renderMiniLog(); renderLog();
-  ks.forEach(function(k){store.del('e_'+skey(k));});
+  ks.forEach(function(k){store.del(entryKey(selectedWh, workerName, k));});
 }
 
 // ── STORAGE HELPERS ───────────────────────────────────────────────────
 function skey(k){ return k.replace(/\|/g,'_').replace(/[^a-zA-Z0-9_-]/g,''); }
 function pushEntry(k,e){
-  store.set('e_'+skey(k), JSON.stringify({
+  // p3.4 — scoped per (warehouse, worker). Also persists additions for audit-trail recovery.
+  // Need workerName + selectedWh to be set; both are set before counting starts.
+  store.set(entryKey(selectedWh, workerName, k), JSON.stringify({
     product:e.item.PRODUCT,pak:e.item.PAK,description:e.item.DESCRIPTION,
-    on_hand:e.item.ON_HAND,count:e.count,worker:workerName,ts:e.ts
+    on_hand:e.item.ON_HAND,vendor:e.item.VENDOR,vpcode:e.item.VPROD_CODE,
+    bin_loc:e.item.BIN_LOC,bom:e.item.BOM,
+    is_new: !!e.item.NEW_PRODUCT,
+    new_notes: e.item.NEW_NOTES||null,
+    count:e.count, additions:e.additions||[e.count],
+    worker:workerName, wh:selectedWh, ts:e.ts
   })).then(function(){ setSyncDot('on'); }).catch(function(){ setSyncDot('err'); });
 }
 
@@ -1854,7 +1972,7 @@ function doCloudSubmit(){
     myLog={};
     document.getElementById('cnt').textContent=0;
     renderMiniLog(); renderLog();
-    ks.forEach(function(k){ try{store.del('e_'+skey(k));}catch(e){} });
+    ks.forEach(function(k){ try{store.del(entryKey(selectedWh, workerName, k));}catch(e){} });
     // Hide submit button (no entries left to submit)
     var sb=document.getElementById('submitBtn');
     if(sb) sb.style.display='none';
@@ -1953,7 +2071,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v12';",
+    "const CACHE='scl-inv-v13';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
