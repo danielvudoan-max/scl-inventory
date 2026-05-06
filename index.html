@@ -175,7 +175,31 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
       <option value="11">WH11 — Vista</option>
     </select>
     <button onclick="startCounting()">Start Counting</button>
+    <button id="supBtn" onclick="trySupervisor()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:11px;font-size:13px;font-family:var(--sans);font-weight:600;cursor:pointer;-webkit-appearance:none;margin-top:10px;touch-action:manipulation">&#128065; Supervisor Dashboard</button>
     <div id="vlbl" style="text-align:center;font-size:10px;color:var(--muted);margin-top:14px;font-family:var(--mono);letter-spacing:.05em;opacity:.6"></div>
+  </div>
+</div>
+
+<!-- RESUME CARD (p3.5) — shown on boot if a recent session exists -->
+<div id="resumeCard" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center;padding:20px;-webkit-align-items:center;-webkit-justify-content:center">
+  <div style="background:var(--surf);border:2px solid var(--acc);border-radius:16px;padding:24px;width:100%;max-width:340px;text-align:center">
+    <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Welcome back</div>
+    <div id="rcName" style="font-size:24px;font-weight:900;color:var(--txt);margin-bottom:4px;line-height:1.15">—</div>
+    <div id="rcCtx" style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.4">Continuing as counter for <b id="rcWh" style="color:var(--acc)">—</b></div>
+    <button onclick="resumeContinue()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;touch-action:manipulation">Continue</button>
+    <button onclick="resumeSwitchCounter()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:11px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px">Switch counter</button>
+    <a href="javascript:void(0)" onclick="resumeFullReset()" style="display:block;font-size:11px;color:var(--muted);text-decoration:underline;opacity:.7">Switch warehouse instead</a>
+  </div>
+</div>
+
+<!-- SWITCH COUNTER MODAL (p3.5) — keeps WH, just re-prompts name -->
+<div id="switchCounterModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px;-webkit-align-items:center;-webkit-justify-content:center">
+  <div style="background:var(--surf);border:2px solid var(--acc);border-radius:16px;padding:24px;width:100%;max-width:340px;text-align:center">
+    <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Switch counter</div>
+    <div id="scWhLabel" style="font-size:18px;font-weight:700;color:var(--acc);margin-bottom:14px;line-height:1.15">WH—</div>
+    <input id="scName" type="text" placeholder="New counter name" autocomplete="off" autocorrect="off" autocapitalize="words" maxlength="30" style="width:100%;background:var(--surf2);border:2px solid var(--bdr);border-radius:8px;padding:14px;font-size:17px;font-family:var(--sans);font-weight:600;color:var(--txt);outline:none;margin-bottom:14px;box-sizing:border-box" onkeydown="if(event.keyCode===13){event.preventDefault();applySwitchCounter()}">
+    <button onclick="applySwitchCounter()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;touch-action:manipulation">Continue</button>
+    <button onclick="cancelSwitchCounter()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:11px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none">Cancel</button>
   </div>
 </div>
 
@@ -234,6 +258,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <header>
   <div class="logo">SCL<span id="hsub">Inventory Count</span></div>
   <div class="hdr-right">
+    <a href="javascript:void(0)" id="switchLink" onclick="openSwitchCounter()" style="display:none;font-size:11px;color:var(--muted);text-decoration:underline;margin-right:4px;cursor:pointer">Switch&nbsp;counter</a>
     <div id="whBadge" style="display:none;background:var(--acc);color:#000;border-radius:6px;padding:4px 10px;font-weight:900;font-size:13px;letter-spacing:.05em;font-family:var(--sans)">WH—</div>
     <div class="pill" id="syncpill" style="display:none"><span class="sdot" id="sdot"></span><span id="slbl">Syncing</span></div>
     <div class="pill">Counted: <b id="cnt">0</b></div>
@@ -401,9 +426,71 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p3.4 · 2026-05-04';
+var APP_VERSION='p3.5 · 2026-05-05';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
+
+// ── SUPERVISORS ───────────────────────────────────────────────────────
+// EDIT THIS LIST TO ADD/REMOVE SUPERVISORS. Names matched case-insensitive,
+// punctuation/whitespace ignored (via normWorker).
+var SUPERVISORS = [
+  'Daniel Doan',
+  'Travis Becktel',
+  'Steve Jackson',
+  'Brett Leggitt'
+];
+function isSupervisor(name){
+  var n = normWorker(name);
+  for(var i=0;i<SUPERVISORS.length;i++){
+    if(normWorker(SUPERVISORS[i]) === n) return true;
+  }
+  return false;
+}
+
+// ── SESSION PERSISTENCE (p3.5) ────────────────────────────────────────
+// Persists (workerName, selectedWh, role, lastActivity) so page refresh /
+// browser restart doesn't kick the user back to the name modal. 3-day cap:
+// if last activity > 3 days ago, session is wiped and login modal shown fresh.
+var SESSION_KEY = 'scl_inv_session';
+var SESSION_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;  // 3 days
+function saveSession(){
+  try {
+    var data = {
+      workerName: workerName,
+      selectedWh: selectedWh,
+      isSup: isSup,
+      ts: Date.now()
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+  } catch(e){}
+}
+function loadSession(){
+  try {
+    var raw = localStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    var d = JSON.parse(raw);
+    if(!d || !d.workerName || (!d.selectedWh && !d.isSup)) return null;
+    if(!d.ts || (Date.now() - d.ts) > SESSION_MAX_AGE_MS){
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return d;
+  } catch(e){ return null; }
+}
+function clearSession(){
+  try { localStorage.removeItem(SESSION_KEY); } catch(e){}
+}
+function touchSession(){
+  // Update lastActivity timestamp on every entry; session sliding-window
+  // resets the 3-day cap as long as the user is active.
+  try {
+    var raw = localStorage.getItem(SESSION_KEY);
+    if(!raw) return;
+    var d = JSON.parse(raw);
+    d.ts = Date.now();
+    localStorage.setItem(SESSION_KEY, JSON.stringify(d));
+  } catch(e){}
+}
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
 const STORAGE_PREFIX = 'scl_inv_';
@@ -887,8 +974,10 @@ function confirmWh(){
     var badge=document.getElementById('whBadge');
     badge.textContent='WH'+wh+' · '+(WH_LABELS[wh]||'');
     badge.style.display='inline-block';
+    document.getElementById('switchLink').style.display='inline';  // p3.5
     document.getElementById('submitBtn').style.display='block';
     showOfflineBanner(false);
+    saveSession();  // p3.5 — persist session for resume on next page load
     // p3.4 — restore any persisted entries for THIS (wh, worker) before sync starts.
     // This is the fix for the "app reset on background eviction" data-loss bug.
     return restoreMyLog(wh, n).then(function(restored){
@@ -1000,16 +1089,116 @@ function restoreMyLog(wh, worker){
     }).catch(function(){ resolve(0); });
   });
 }
+// p3.5 — gated supervisor entry from login modal
+function trySupervisor(){
+  var n = (document.getElementById('ni').value||'').trim();
+  if(!n){ toast('Enter your name first','w'); return; }
+  if(!isSupervisor(n)){ toast('Supervisor access restricted','e'); return; }
+  workerName = n;
+  startSupervisor();
+}
 function startSupervisor(){
-  workerName='Supervisor'; isSup=true;
+  isSup=true;
+  if(!workerName) workerName='Supervisor';  // fallback for direct calls
   document.getElementById('modal').className='gone';
   document.getElementById('hsub').textContent=' — Dashboard';
   document.getElementById('tSup').style.display='';
   document.getElementById('tCount').style.display='none';
   document.getElementById('tLog').style.display='none';
+  document.getElementById('switchLink').style.display='inline';  // p3.5
   showOfflineBanner(true);
+  saveSession();  // p3.5 — persist supervisor session too
   startSync();
   switchTab('sup');
+}
+
+// p3.5 — resume from saved session
+function tryResume(){
+  var s = loadSession();
+  if(!s) return false;
+  workerName = s.workerName;
+  selectedWh = s.selectedWh || '';
+  isSup = !!s.isSup;
+  // Populate resume card
+  document.getElementById('rcName').textContent = s.workerName;
+  if(s.isSup){
+    document.getElementById('rcCtx').innerHTML = 'Continuing as <b style="color:var(--acc)">Supervisor</b>';
+    // rcWh element no longer exists after the innerHTML replacement above; nothing to hide
+  } else {
+    var whLabel = 'WH'+s.selectedWh+' — '+(WH_LABELS[s.selectedWh]||'');
+    document.getElementById('rcCtx').innerHTML = 'Continuing as counter for <b id="rcWh" style="color:var(--acc)">'+whLabel+'</b>';
+  }
+  document.getElementById('resumeCard').style.display='flex';
+  return true;
+}
+function resumeContinue(){
+  document.getElementById('resumeCard').style.display='none';
+  if(isSup){
+    startSupervisor();
+  } else {
+    // Run the same flow as confirmWh — load inventory, restore entries
+    confirmWh();
+  }
+}
+function resumeSwitchCounter(){
+  // Keep WH (or supervisor mode), but re-prompt for name
+  document.getElementById('resumeCard').style.display='none';
+  if(isSup){
+    // For supervisor mode, "switch counter" means "log out, return to login"
+    resumeFullReset();
+    return;
+  }
+  document.getElementById('scWhLabel').textContent = 'WH'+selectedWh+' — '+(WH_LABELS[selectedWh]||'');
+  document.getElementById('scName').value = '';
+  document.getElementById('switchCounterModal').style.display='flex';
+  setTimeout(function(){ document.getElementById('scName').focus(); }, 100);
+}
+function resumeFullReset(){
+  document.getElementById('resumeCard').style.display='none';
+  clearSession();
+  workerName=''; selectedWh=''; isSup=false;
+  // Show the login modal (it's not hidden by default; just need to ensure it's visible)
+  document.getElementById('modal').className='';
+}
+
+// p3.5 — Switch counter (mid-session, called from header link)
+function openSwitchCounter(){
+  if(isSup){
+    // Supervisor → going back to login means full reset
+    if(!confirm('Exit Supervisor Dashboard and return to login?')) return;
+    fullLogout();
+    return;
+  }
+  document.getElementById('scWhLabel').textContent = 'WH'+selectedWh+' — '+(WH_LABELS[selectedWh]||'');
+  document.getElementById('scName').value = '';
+  document.getElementById('switchCounterModal').style.display='flex';
+  setTimeout(function(){ document.getElementById('scName').focus(); }, 100);
+}
+function cancelSwitchCounter(){
+  document.getElementById('switchCounterModal').style.display='none';
+}
+function applySwitchCounter(){
+  var n = (document.getElementById('scName').value||'').trim();
+  if(!n){ toast('Enter a name','w'); return; }
+  // Clear in-memory log (the previous counter's entries are persisted in
+  // localStorage under their scoped keys; they're not lost, just not shown).
+  myLog = {};
+  document.getElementById('cnt').textContent = 0;
+  renderMiniLog();
+  renderLog();
+  workerName = n;
+  document.getElementById('hsub').textContent = ' — '+n;
+  saveSession();
+  document.getElementById('switchCounterModal').style.display='none';
+  // Trigger restore for the new counter on the same WH
+  restoreMyLog(selectedWh, n).then(function(restored){
+    toast('Now counting as '+n + (restored>0 ? ' · '+restored+' recovered' : ''), 's');
+  });
+}
+function fullLogout(){
+  clearSession();
+  // Reload the page for a clean slate
+  location.reload();
 }
 function showOfflineBanner(forSup){
   // Tip banner hidden in p2.5 per Daniel's request — function preserved for future use
@@ -1357,17 +1546,19 @@ function saveNewItem(){
   resetMatch();
   setTimeout(function(){document.getElementById('scanInput').focus();},150);
 }
+// p3.5 — escape string for use inside an HTML attribute wrapped in double quotes
+function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function renderMiniLog(){
   var ents=Object.keys(myLog).map(function(k){return myLog[k];});
   document.getElementById('eLog').style.display=ents.length?'none':'block';
   var t=document.getElementById('miniLog');
   t.style.display=ents.length?'table':'none';
   document.getElementById('mlBody').innerHTML=ents.slice().reverse().slice(0,6).map(function(e){
-    var k=e.item.PRODUCT+'|'+e.item.PAK, ks=k.replace(/'/g,"\'");
+    var k=e.item.PRODUCT+'|'+e.item.PAK, ks=escAttr(k);
     var adds=e.additions||[];
     var countDisp=e.count;
-    if(adds.length>1) countDisp=e.count+'<span style="color:var(--muted);font-size:9px;margin-left:3px">×'+adds.length+'</span>';
-    return '<tr><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td><button class="xbtn" onclick="delEntry("+ks+")">&#10005;</button></td></tr>';
+    if(adds.length>1) countDisp=e.count+'<span style="color:var(--muted);font-size:9px;margin-left:3px">&times;'+adds.length+'</span>';
+    return '<tr><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td><button class="xbtn" onclick="delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
   }).join('');
 }
 function renderLog(){
@@ -1377,13 +1568,13 @@ function renderLog(){
   t.style.display=ents.length?'table':'none';
   document.getElementById('ltBody').innerHTML=ents.slice().reverse().map(function(e){
     var d=e.count-e.item.ON_HAND, dc=d>0?'dp':d<0?'dn':'dz', ds=d>0?'+'+d:d===0?'—':d;
-    var k=e.item.PRODUCT+'|'+e.item.PAK, ks=k.replace(/'/g,"\'");
+    var k=e.item.PRODUCT+'|'+e.item.PAK, ks=escAttr(k);
     var newBadge=e.item.NEW_PRODUCT?'<span style="background:var(--acc2);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;margin-left:5px;letter-spacing:.05em">NEW</span>':'';
     // Multi-add breakdown — show "total (a+b+c)" only when there are 2+ additions
     var adds=e.additions||[];
     var countDisp=e.count;
     if(adds.length>1) countDisp=e.count+' <span style="color:var(--muted);font-size:10px">('+adds.join('+')+')</span>';
-    return '<tr><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+newBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="delEntry("+ks+")">&#10005;</button></td></tr>';
+    return '<tr><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+newBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
   }).join('');
 }
 function delEntry(k){
@@ -1416,6 +1607,7 @@ function pushEntry(k,e){
     count:e.count, additions:e.additions||[e.count],
     worker:workerName, wh:selectedWh, ts:e.ts
   })).then(function(){ setSyncDot('on'); }).catch(function(){ setSyncDot('err'); });
+  touchSession();  // p3.5 — slide 3-day cap forward on activity
 }
 
 // ── SYNC ──────────────────────────────────────────────────────────────
@@ -2071,7 +2263,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v13';",
+    "const CACHE='scl-inv-v14';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
@@ -2114,6 +2306,10 @@ function toast(msg,type){
 (function(){
   var v=document.getElementById('vlbl');
   if(v) v.textContent='v '+APP_VERSION;
+  // p3.5 — attempt to resume from saved session. If a valid session exists,
+  // shows the resume card over the login modal. Otherwise the login modal is
+  // already visible by default.
+  tryResume();
 })();
 </script>
 </body>
