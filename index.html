@@ -1180,20 +1180,29 @@ function cancelSwitchCounter(){
 function applySwitchCounter(){
   var n = (document.getElementById('scName').value||'').trim();
   if(!n){ toast('Enter a name','w'); return; }
-  // Clear in-memory log (the previous counter's entries are persisted in
-  // localStorage under their scoped keys; they're not lost, just not shown).
-  myLog = {};
-  document.getElementById('cnt').textContent = 0;
-  renderMiniLog();
-  renderLog();
   workerName = n;
-  document.getElementById('hsub').textContent = ' — '+n;
   saveSession();
   document.getElementById('switchCounterModal').style.display='none';
-  // Trigger restore for the new counter on the same WH
-  restoreMyLog(selectedWh, n).then(function(restored){
-    toast('Now counting as '+n + (restored>0 ? ' · '+restored+' recovered' : ''), 's');
-  });
+
+  // Detect whether we're mid-session (inventory already loaded, login modal hidden)
+  // or coming from a fresh boot via the resume card (login modal still underneath).
+  var isMidSession = document.getElementById('modal').className === 'gone';
+
+  if(isMidSession){
+    // Mid-session swap: clear in-memory log, restore for new counter on same WH.
+    myLog = {};
+    document.getElementById('cnt').textContent = 0;
+    renderMiniLog();
+    renderLog();
+    document.getElementById('hsub').textContent = ' — '+n;
+    restoreMyLog(selectedWh, n).then(function(restored){
+      toast('Now counting as '+n + (restored>0 ? ' · '+restored+' recovered' : ''), 's');
+    });
+  } else {
+    // Fresh boot from resume card: do the full confirmWh flow (loads inventory,
+    // hides login modal, fires restore, shows submit button, etc).
+    confirmWh();
+  }
 }
 function fullLogout(){
   clearSession();
