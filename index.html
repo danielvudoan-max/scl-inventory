@@ -426,7 +426,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p3.5 · 2026-05-05';
+var APP_VERSION='p3.6 · 2026-05-05';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -596,27 +596,62 @@ function expandGrades(s){
 }
 function findProds(q){
   q=q.trim().toUpperCase(); if(!q)return[];
-  if(idx[q])return idx[q];
-  var keys=Object.keys(idx).filter(function(k){return k.indexOf(q)===0;});
-  if(keys.length===1)return idx[keys[0]];
-  if(keys.length>1)return keys.reduce(function(a,k){return a.concat(idx[k]);},[]);
+
+  // p3.6 — Step 1: gather code matches (exact, then prefix on PRODUCT).
+  var codeMatches = [];
+  if(idx[q]){
+    codeMatches = idx[q].slice();
+  } else {
+    var prefixKeys = Object.keys(idx).filter(function(k){return k.indexOf(q)===0;});
+    if(prefixKeys.length){
+      codeMatches = prefixKeys.reduce(function(a,k){return a.concat(idx[k]);},[]);
+    }
+  }
+
+  // p3.6 — Step 2: gather word-boundary description matches.
+  // \b...\b against an uppercase regex-escaped query. Word boundary keeps "DELO"
+  // matching "DELO 400" / "Chevron DELO 15W-40" but NOT "INDELOS".
+  var descMatches = [];
+  if(q.length >= 2){
+    var qEsc = q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    var rx = new RegExp('\\b'+qEsc+'\\b');
+    descMatches = PRODUCTS.filter(function(p){
+      return rx.test((p.DESCRIPTION||'').toUpperCase());
+    });
+  }
+
+  // p3.6 — Step 3: merge code matches first, then dedupe-add description matches.
+  if(codeMatches.length || descMatches.length){
+    var seen = {};
+    var out = [];
+    function add(arr){
+      for(var i=0;i<arr.length;i++){
+        var p=arr[i], k=p.PRODUCT+'|'+p.PAK;
+        if(!seen[k]){ seen[k]=1; out.push(p); }
+      }
+    }
+    add(codeMatches);
+    add(descMatches);
+    return out;
+  }
+
+  // p3.6 — Step 4: fallback to multi-word grade-normalized matching for
+  // queries that don't match by code prefix or simple description boundary
+  // (e.g. "delo 400 15w40" — multi-word, with grade variants).
   var qn=normalizeGrade(q);
   var qw=expandGrades(qn);
-  if(q.length>=2){
-    var words=q.split(' ').filter(function(w){return w.length>=2;});
-    var wordsN=qn.split(' ').filter(function(w){return w.length>=2;});
-    var wordsW=qw.split(' ').filter(function(w){return w.length>=2;});
-    var descMatches=PRODUCTS.filter(function(p){
-      var d=p.DESCRIPTION.toUpperCase();
-      var dn=normalizeGrade(d);
-      var dw=expandGrades(dn);
-      var pc=p.PRODUCT.toUpperCase();
-      function allMatch(ws,t1,t2){return ws.every(function(w){return t1.indexOf(w)>=0||t2.indexOf(w)>=0;});}
-      return allMatch(words,d,pc)||allMatch(wordsN,dn,pc)||allMatch(wordsW,dw,pc);
-    });
-    if(descMatches.length)return descMatches;
-  }
-  return[];
+  var words=q.split(' ').filter(function(w){return w.length>=2;});
+  var wordsN=qn.split(' ').filter(function(w){return w.length>=2;});
+  var wordsW=qw.split(' ').filter(function(w){return w.length>=2;});
+  var fallback=PRODUCTS.filter(function(p){
+    var d=p.DESCRIPTION.toUpperCase();
+    var dn=normalizeGrade(d);
+    var dw=expandGrades(dn);
+    var pc=p.PRODUCT.toUpperCase();
+    function allMatch(ws,t1,t2){return ws.every(function(w){return t1.indexOf(w)>=0||t2.indexOf(w)>=0;});}
+    return allMatch(words,d,pc)||allMatch(wordsN,dn,pc)||allMatch(wordsW,dw,pc);
+  });
+  return fallback;
 }
 function findByVendorCode(vc){
   if(!vc) return [];
@@ -1231,18 +1266,13 @@ function switchTab(t){
 }
 
 // ── SCAN INPUT ────────────────────────────────────────────────────────
-// Dismissal II: arm on focus of scan input; dismiss AI panel on first keystroke.
-// Focus alone won't dismiss (protects against accidental taps); requires a real input event.
-var _scanDismissArmed=false;
-function armScanDismiss(){ _scanDismissArmed=true; }
-function dismissAiPanelIfArmed(){
-  if(!_scanDismissArmed) return;
-  _scanDismissArmed=false;
+// p3.6 — AI panel dismisses immediately on focus of scan input.
+function armScanDismiss(){
   var res=document.getElementById('aiResult');
-  if(res&&res.style.display==='block'){ res.style.display='none'; }
+  if(res && res.style.display==='block'){ res.style.display='none'; }
 }
+function dismissAiPanelIfArmed(){ /* legacy no-op kept for any stale callers */ }
 function onScanInput(){
-  dismissAiPanelIfArmed();
   clearTimeout(scanTimer);
   var v=document.getElementById('scanInput').value.trim();
   if(!v){resetMatch();return;}
@@ -1557,6 +1587,14 @@ function saveNewItem(){
 }
 // p3.5 — escape string for use inside an HTML attribute wrapped in double quotes
 function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// p3.6 — tap a recent-list row to add more to that item (re-opens it as if scanned).
+function tapToAdd(k){
+  var e = myLog[k];
+  if(!e || !e.item) return;
+  if(curTab !== 'count') switchTab('count');
+  document.getElementById('scanInput').value='';
+  showMatch(e.item);
+}
 function renderMiniLog(){
   var ents=Object.keys(myLog).map(function(k){return myLog[k];});
   document.getElementById('eLog').style.display=ents.length?'none':'block';
@@ -1567,7 +1605,8 @@ function renderMiniLog(){
     var adds=e.additions||[];
     var countDisp=e.count;
     if(adds.length>1) countDisp=e.count+'<span style="color:var(--muted);font-size:9px;margin-left:3px">&times;'+adds.length+'</span>';
-    return '<tr><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td><button class="xbtn" onclick="delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
+    // p3.6 — entire row tappable (calls tapToAdd); × button stops propagation so it only deletes.
+    return '<tr style="cursor:pointer" onclick="tapToAdd(&#39;'+ks+'&#39;)"><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td><button class="xbtn" onclick="event.stopPropagation();delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
   }).join('');
 }
 function renderLog(){
@@ -1583,10 +1622,15 @@ function renderLog(){
     var adds=e.additions||[];
     var countDisp=e.count;
     if(adds.length>1) countDisp=e.count+' <span style="color:var(--muted);font-size:10px">('+adds.join('+')+')</span>';
-    return '<tr><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+newBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
+    // p3.6 — entire row tappable (calls tapToAdd); × button stops propagation so it only deletes.
+    return '<tr style="cursor:pointer" onclick="tapToAdd(&#39;'+ks+'&#39;)"><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+newBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="event.stopPropagation();delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
   }).join('');
 }
 function delEntry(k){
+  // p3.6 — confirm before deleting. Show product code + count for context.
+  var e = myLog[k];
+  var label = e && e.item ? (e.item.PRODUCT||'(no code)')+' — count '+e.count : 'this entry';
+  if(!confirm('Delete '+label+'?')) return;
   delete myLog[k];
   document.getElementById('cnt').textContent=Object.keys(myLog).length;
   renderMiniLog(); renderLog();
@@ -2272,7 +2316,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v14';",
+    "const CACHE='scl-inv-v15';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
