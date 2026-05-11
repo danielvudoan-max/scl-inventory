@@ -159,6 +159,18 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 </head>
 <body>
 
+<!-- PASSWORD GATE (p3.7) — shown on boot before everything if gate flag missing/expired -->
+<div id="pwdGate" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:10000;align-items:center;justify-content:center;padding:20px;-webkit-align-items:center;-webkit-justify-content:center">
+  <div style="background:var(--surf);border:2px solid var(--acc);border-radius:16px;padding:28px 24px;width:100%;max-width:340px;text-align:center">
+    <div style="font-size:36px;margin-bottom:8px">&#128274;</div>
+    <div style="font-size:20px;font-weight:900;color:var(--txt);margin-bottom:6px">SCL Inventory Count</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Enter access password</div>
+    <input id="pwdInput" type="password" placeholder="Password" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" style="width:100%;background:var(--surf2);border:2px solid var(--bdr);border-radius:8px;padding:14px;font-size:17px;font-family:var(--sans);color:var(--txt);outline:none;margin-bottom:14px;box-sizing:border-box;text-align:center" onkeydown="if(event.keyCode===13){event.preventDefault();submitPwd()}">
+    <button onclick="submitPwd()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">Continue</button>
+    <div id="pwdErr" style="display:none;font-size:12px;color:var(--danger);margin-top:12px">Incorrect password</div>
+  </div>
+</div>
+
 <!-- MODAL: inline onclick, no addEventListener dependency -->
 <div id="modal">
   <div class="mbox">
@@ -426,7 +438,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p3.6 · 2026-05-05';
+var APP_VERSION='p3.8 · 2026-05-05';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -490,6 +502,92 @@ function touchSession(){
     d.ts = Date.now();
     localStorage.setItem(SESSION_KEY, JSON.stringify(d));
   } catch(e){}
+}
+
+// ── PASSWORD GATE (p3.7) ──────────────────────────────────────────────
+// Hardcoded SHA-256 hashes of the counter and supervisor passwords.
+// Generate new hashes via the standalone hash_gen.html tool.
+// To rotate: paste new hash strings here, redeploy. Active gate flags
+// stay valid for the same browser/user until the 3-day cap; if you want
+// to force everyone to re-auth immediately, also bump GATE_REVISION.
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
+var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
+var GATE_REVISION = 1;  // bump to invalidate all existing gate flags
+var GATE_KEY = 'scl_inv_gate';
+var GATE_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;  // 3 days, matches session
+
+function sha256Hex(str){
+  // Web Crypto SubtleCrypto. Available on iOS Safari 11+, Android Chrome 37+,
+  // all modern browsers. Requires HTTPS or localhost (github.io is HTTPS).
+  var enc = new TextEncoder();
+  return crypto.subtle.digest('SHA-256', enc.encode(str)).then(function(buf){
+    var arr = new Uint8Array(buf);
+    var hex = '';
+    for(var i=0;i<arr.length;i++) hex += ('0'+arr[i].toString(16)).slice(-2);
+    return hex;
+  });
+}
+function loadGate(){
+  try {
+    var raw = localStorage.getItem(GATE_KEY);
+    if(!raw) return null;
+    var d = JSON.parse(raw);
+    if(!d || !d.role || !d.ts) return null;
+    if(d.rev !== GATE_REVISION){ localStorage.removeItem(GATE_KEY); return null; }
+    if((Date.now() - d.ts) > GATE_MAX_AGE_MS){ localStorage.removeItem(GATE_KEY); return null; }
+    return d;
+  } catch(e){ return null; }
+}
+function saveGate(role){
+  try {
+    localStorage.setItem(GATE_KEY, JSON.stringify({
+      role: role, ts: Date.now(), rev: GATE_REVISION
+    }));
+  } catch(e){}
+}
+function clearGate(){ try{ localStorage.removeItem(GATE_KEY); }catch(e){} }
+function showGate(){
+  document.getElementById('pwdGate').style.display='flex';
+  setTimeout(function(){ document.getElementById('pwdInput').focus(); }, 100);
+}
+function hideGate(){
+  document.getElementById('pwdGate').style.display='none';
+}
+function submitPwd(){
+  var input = document.getElementById('pwdInput');
+  var v = input.value || '';
+  if(!v){ return; }
+  sha256Hex(v).then(function(h){
+    var role = null;
+    if(h === SUPERVISOR_PWD_HASH) role = 'supervisor';
+    else if(h === COUNTER_PWD_HASH) role = 'counter';
+    if(!role){
+      document.getElementById('pwdErr').style.display='block';
+      input.value = '';
+      input.focus();
+      return;
+    }
+    document.getElementById('pwdErr').style.display='none';
+    saveGate(role);
+    _gateRole = role;
+    input.value = '';
+    hideGate();
+    // Hand off to existing boot logic — try resume, else show login modal.
+    afterGate();
+  }).catch(function(){
+    // Web Crypto unavailable (very old browser); fall back gracefully
+    document.getElementById('pwdErr').textContent = 'Browser unsupported (no Web Crypto)';
+    document.getElementById('pwdErr').style.display='block';
+  });
+}
+// Track the gate-passed role so trySupervisor can require both gate=supervisor AND whitelist.
+var _gateRole = null;
+function afterGate(){
+  // Mirror the original boot flow: if a session exists, show resume card; else login modal.
+  var resumed = tryResume();
+  if(!resumed){
+    // Login modal is the default visible element; nothing to do
+  }
 }
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
@@ -1125,9 +1223,11 @@ function restoreMyLog(wh, worker){
   });
 }
 // p3.5 — gated supervisor entry from login modal
+// p3.7 — also requires gate role = supervisor (in addition to whitelist)
 function trySupervisor(){
   var n = (document.getElementById('ni').value||'').trim();
   if(!n){ toast('Enter your name first','w'); return; }
+  if(_gateRole !== 'supervisor'){ toast('Supervisor password required','e'); return; }
   if(!isSupervisor(n)){ toast('Supervisor access restricted','e'); return; }
   workerName = n;
   startSupervisor();
@@ -1267,7 +1367,16 @@ function switchTab(t){
 
 // ── SCAN INPUT ────────────────────────────────────────────────────────
 // p3.6 — AI panel dismisses immediately on focus of scan input.
+// p3.7 — also tear down the camera/photo view so the stream stops.
 function armScanDismiss(){
+  // Close live camera/photo capture if it's open (also stops the MediaStream tracks)
+  if(typeof photoStream !== 'undefined' && photoStream){
+    closePhotoScan();
+  } else {
+    var pv=document.getElementById('photoView');
+    if(pv && pv.style.display!=='none') pv.style.display='none';
+  }
+  // Close the AI results panel
   var res=document.getElementById('aiResult');
   if(res && res.style.display==='block'){ res.style.display='none'; }
 }
@@ -1302,6 +1411,12 @@ function doSearch(q){
     d.onclick=function(){mlEl.style.display='none';showMatch(r);};
     mlEl.appendChild(d);
   });
+  // p3.8 — always show "+ Add new item" at the bottom of multi-results.
+  // If the user is holding a product none of these match, they can add it as new.
+  var addNew=document.createElement('div');
+  addNew.style.cssText='padding:12px;margin-top:6px;border-top:1px dashed var(--bdr);text-align:center';
+  addNew.innerHTML='<button onclick="document.getElementById(\'ml\').style.display=\'none\';openNewItem()" style="background:transparent;color:var(--acc2);border:1px solid var(--acc2);border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">+ My item isn\u2019t here \u2014 add new</button>';
+  mlEl.appendChild(addNew);
 }
 function showMatch(item){
   curItem=item;
@@ -1354,11 +1469,23 @@ function resetMatch(){
 function onCountSubmit(){ saveCountReplace(); }
 
 // Internal — performs the save. mode='replace' or 'add'.
+// p3.8 — sanity threshold for "are you sure?" prompt on unusually large counts.
+// 10,000 chosen because legitimate pallet/case counts (e.g. 80 cases × 12) can hit
+// thousands; five-digit individual SKU counts are almost always typos.
+var COUNT_SANITY_MAX = 10000;
 function _doSaveCount(mode){
   if(!curItem)return;
   var raw=document.getElementById('ci').value;
+  // p3.8 — block decimals (no truncation surprises)
+  if(/[.,]/.test(raw)){ toast('Whole numbers only','w'); return; }
   var n=parseInt(raw,10);
   if(raw===''||isNaN(n)){toast('Enter a count value','w');return;}
+  // p3.8 — block negative counts
+  if(n<0){ toast('Count cannot be negative','w'); return; }
+  // p3.8 — sanity check on large counts (one-shot confirm; user can still proceed)
+  if(n>COUNT_SANITY_MAX){
+    if(!confirm('Count of '+n+' is unusually large. Are you sure?')) return;
+  }
   var k=curItem.PRODUCT+'|'+curItem.PAK;
   var prior=myLog[k];
   var newTotal=n;
@@ -2016,17 +2143,16 @@ function snapAndIdentify(){
     } else {
       weakBanner.style.display='none';
     }
-    // Single Add-New button — empty (solid) when no results, alternatives (outlined) when fallback/weak
+    // p3.8 — Always show the Add-New button at the bottom of AI results.
+    // empty (solid prominent) when there are no results; alternatives (outlined,
+    // smaller) in every other case so the user can always escape if AI's
+    // matches don't match the physical product they're holding.
     if(!hasResults){
       document.getElementById('airNoneMsg').style.display='block';
       setAddNewBtn('empty');
       return;
     }
-    if(dbg.isFallback||dbg.isWeakMatch){
-      setAddNewBtn('alternatives');
-    } else {
-      setAddNewBtn('hidden');
-    }
+    setAddNewBtn('alternatives');
     // Render with pak filter
     renderAiMatches(allMatches,'All');
   }).catch(function(e){
@@ -2164,6 +2290,8 @@ function doCloudSubmit(){
   if(!selectedWh){toast('No warehouse selected','e');return;}
   var whNum=parseInt(String(selectedWh).replace(/^WH/i,''),10);
   if(isNaN(whNum)){toast('Bad warehouse value','e');return;}
+  // p3.8 — bulk submit confirmation
+  if(!confirm('Submit '+ents+' item'+(ents===1?'':'s')+' to SCL Server for WH'+whNum+'?')) return;
 
   cloudSubmitting=true;
   var btn=document.getElementById('cloudSubmitBtn');
@@ -2316,7 +2444,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v15';",
+    "const CACHE='scl-inv-v17';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
@@ -2359,10 +2487,16 @@ function toast(msg,type){
 (function(){
   var v=document.getElementById('vlbl');
   if(v) v.textContent='v '+APP_VERSION;
-  // p3.5 — attempt to resume from saved session. If a valid session exists,
-  // shows the resume card over the login modal. Otherwise the login modal is
-  // already visible by default.
-  tryResume();
+  // p3.7 — gate first. If a valid gate flag exists, skip the password screen
+  // and proceed to resume/login. Otherwise show the password modal; submitPwd
+  // will call afterGate() which mirrors the resume flow.
+  var gate = loadGate();
+  if(gate){
+    _gateRole = gate.role;
+    tryResume();  // p3.5 behavior
+  } else {
+    showGate();
+  }
 })();
 </script>
 </body>
