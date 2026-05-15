@@ -1685,7 +1685,12 @@ function showMatch(item){
   document.getElementById('moh').textContent=item.ON_HAND;
   document.getElementById('mbin').textContent=item.BIN_LOC||'—';
   document.getElementById('moo').textContent=item.OPEN_ORDERS;
-  var k=item.PRODUCT+'|'+item.PAK;
+  // p4.0 — myLog is keyed by `PRODUCT|PAK|BIN`. Prior-count detection (which drives
+  // the Add/Replace UI) must use the same 3-part key, otherwise a re-scanned product
+  // is always treated as fresh and the Add/Replace pair never appears. Bin-scoped
+  // matching is also semantically correct: same product in same bin = update;
+  // same product in a different bin = new entry.
+  var k=item.PRODUCT+'|'+item.PAK+'|'+(activeBin||'');
   var ci=document.getElementById('ci');
   var prior=myLog[k];
   var prevRow=document.getElementById('prevCountRow');
@@ -1931,14 +1936,17 @@ function saveNewItem(){
     NEW_NOTES: notes
   };
   // Build dedup key:
-  //   - If product code provided: PRODUCT|PAK (collision check works)
+  //   - If product code provided: PRODUCT|PAK|BIN (collision check works, bin-scoped per p4.0)
   //   - If empty: synthetic per-entry key based on timestamp so multiple no-code items don't overwrite
+  // p4.0 — keys include bin so the same new-item code in different bins becomes
+  //        separate entries (matches the regular scan path behavior).
   var k;
   if(code){
-    k=code+'|'+pak;
+    k=code+'|'+pak+'|'+(activeBin||'');
   } else {
-    // Synthetic key — unique per save; description+pak+timestamp keeps it human-readable in dev tools
-    k='__NEW__|'+pak+'|'+desc.substring(0,20)+'|'+Date.now();
+    // Synthetic key — unique per save; description+pak+timestamp keeps it human-readable in dev tools.
+    // Bin appended so each gets a clean 3-part shape (matches submit-clear / delete parsing).
+    k='__NEW__|'+pak+'|'+desc.substring(0,20)+'-'+Date.now()+'|'+(activeBin||'');
   }
   // Collision handling for explicit codes only
   if(code && myLog[k]){
@@ -1948,15 +1956,26 @@ function saveNewItem(){
       // Add
       var newTotal=(prior.count||0)+n;
       var additions=(prior.additions||[prior.count||0]).concat([n]);
-      myLog[k]={item:item,count:newTotal,ts:Date.now(),additions:additions};
+      myLog[k]={
+        item:item,count:newTotal,ts:Date.now(),additions:additions,
+        // p4.0 — preserve location stamp on update
+        location_bin: activeBin||'', location_sub: activeBinSub||'', location_tag: activeBinTag||''
+      };
       toast('Added: '+code+' = '+newTotal,'s');
     } else {
       // Replace
-      myLog[k]={item:item,count:n,ts:Date.now(),additions:[n]};
+      myLog[k]={
+        item:item,count:n,ts:Date.now(),additions:[n],
+        location_bin: activeBin||'', location_sub: activeBinSub||'', location_tag: activeBinTag||''
+      };
       toast('Replaced: '+code+' = '+n,'s');
     }
   } else {
-    myLog[k]={item:item,count:n,ts:Date.now(),additions:[n]};
+    myLog[k]={
+      item:item,count:n,ts:Date.now(),additions:[n],
+      // p4.0 — stamp location on every new-item save
+      location_bin: activeBin||'', location_sub: activeBinSub||'', location_tag: activeBinTag||''
+    };
     toast('Added new item: '+(code||'(no code)'),'s');
   }
   document.getElementById('cnt').textContent=Object.keys(myLog).length;
@@ -2668,7 +2687,40 @@ function doCloudSubmit(){
     myLog={};
     document.getElementById('cnt').textContent=0;
     renderMiniLog(); renderLog();
-    ks.forEach(function(k){ try{store.del(entryKey(selectedWh, workerName, k));}catch(e){} });
+    // p4.0 — keys are now `PRODUCT|PAK|BIN`. Split bin off before passing to entryKey
+    //        (entryKey takes bin as a separate arg; skey() inside it strips pipes).
+    //        Bug fix: previously this called entryKey(...k) without splitting the bin,
+    //        which built the wrong storage key and left zombie entries that reappeared
+    //        on refresh — a duplicate-submit risk.
+    ks.forEach(function(k){
+      try{
+        var lastPipe = k.lastIndexOf('|');
+        var skeyPart = lastPipe >= 0 ? k.substring(0, lastPipe) : k;
+        var binPart  = lastPipe >= 0 ? k.substring(lastPipe+1) : '';
+        store.del(entryKey(selectedWh, workerName, skeyPart, binPart));
+      }catch(e){}
+    });
+    // p4.0 — DEFENSIVE SWEEP. After targeted deletes, list all remaining `e_*` keys
+    //        scoped to this (wh, worker) and delete any that survived. Handles:
+    //          • old-format keys from a prior session that got picked up by restore
+    //          • partial-failure cases where one targeted delete errored silently
+    //          • entries that were saved to KV but never made it into the in-memory
+    //            myLog (e.g. write succeeded but the response was dropped)
+    //        Without this, refresh-after-submit could resurrect "phantom" entries.
+    try {
+      var prefix = entryKeyPrefix(selectedWh, workerName);
+      var fullPrefix = PFX + prefix;
+      store.list('e_').then(function(r){
+        if(!r || !r.keys) return;
+        r.keys.forEach(function(rawKey){
+          var key = (typeof rawKey === 'string') ? rawKey : rawKey.name;
+          if(key.indexOf(fullPrefix) === 0){
+            // Strip PFX so store.del gets the bare key
+            try{ store.del(key.substring(PFX.length)); }catch(e){}
+          }
+        });
+      }).catch(function(){});
+    } catch(e){}
     // Hide submit button (no entries left to submit)
     var sb=document.getElementById('submitBtn');
     if(sb) sb.style.display='none';
