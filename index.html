@@ -155,55 +155,6 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 .thinking-dots::after{content:'...';animation:dots 1.2s infinite}
 @keyframes dots{0%{content:'.'}40%{content:'..'}80%{content:'...'}}
 
-/* ── BIN PICKER (p4.0) ─────────────────────────────────────────── */
-/* Modal overlay. Higher z-index than confirmWh so it sits above the warehouse flow. */
-#binPicker{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9995;align-items:flex-start;justify-content:center;padding:14px 12px;overflow-y:auto;-webkit-align-items:flex-start;-webkit-justify-content:center;-webkit-overflow-scrolling:touch}
-.bp-box{background:var(--surf);border:2px solid var(--acc);border-radius:14px;padding:18px 16px;width:100%;max-width:380px;margin:auto}
-.bp-title{font-size:18px;font-weight:900;color:var(--acc);margin-bottom:4px}
-.bp-sub{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.4}
-.bp-active{font-size:11px;color:var(--acc);background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.3);border-radius:6px;padding:8px 10px;margin-bottom:10px;display:none}
-.bp-active.show{display:block}
-.bp-tabs{display:-webkit-flex;display:flex;background:var(--surf2);border-radius:8px;padding:3px;margin-bottom:12px;gap:3px}
-.bp-tab{-webkit-flex:1;flex:1;padding:8px 4px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);cursor:pointer;border-radius:6px;border:none;background:transparent;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation}
-.bp-tab.on{background:var(--acc);color:#000}
-.bp-tab.disabled{opacity:.4;cursor:not-allowed;position:relative}
-.bp-tab.disabled::after{content:'soon';position:absolute;top:1px;right:3px;font-size:8px;color:var(--warn);font-weight:600;text-transform:lowercase;letter-spacing:0}
-.bp-pnl{display:none}
-.bp-pnl.on{display:block}
-/* List grid */
-.bp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
-.bp-bin{background:var(--surf2);border:2px solid var(--bdr);border-radius:8px;padding:14px 6px;font-size:15px;font-weight:800;color:var(--txt);cursor:pointer;text-align:center;font-family:var(--mono);-webkit-appearance:none;touch-action:manipulation;transition:border-color .12s,background .12s}
-.bp-bin:active{background:var(--acc);color:#000;border-color:var(--acc)}
-.bp-other{width:100%;background:var(--surf2);border:1px dashed var(--bdr);border-radius:8px;padding:10px;font-size:13px;color:var(--muted);cursor:pointer;text-align:center;font-family:var(--sans);font-weight:600;-webkit-appearance:none;touch-action:manipulation;margin-top:4px}
-.bp-other-in{display:none;width:100%;background:var(--surf2);border:1px solid var(--acc2);border-radius:8px;padding:10px;font-size:14px;font-family:var(--mono);color:var(--txt);outline:none;margin-top:4px;box-sizing:border-box;text-align:center}
-/* Sub-bin picker */
-.bp-sub-wrap{display:none;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:10px;margin-top:8px}
-.bp-sub-wrap.on{display:block}
-.bp-sub-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
-.bp-sub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.bp-sub-btn{background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:9px 4px;font-size:13px;font-weight:700;color:var(--txt);cursor:pointer;font-family:var(--mono);-webkit-appearance:none;touch-action:manipulation}
-.bp-sub-btn:active{background:var(--acc2);color:#fff;border-color:var(--acc2)}
-/* Map */
-.bp-map-wrap{position:relative;width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:4px}
-.bp-map-img{width:100%;display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.bp-map-region{position:absolute;background:rgba(0,212,170,.15);border:1.5px solid rgba(0,212,170,.6);border-radius:3px;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:800;color:#000;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;text-shadow:0 1px 2px rgba(255,255,255,.4);touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,212,170,.4)}
-.bp-map-region:active{background:rgba(0,212,170,.45)}
-.bp-map-err{padding:20px;text-align:center;color:var(--muted);font-size:12px;line-height:1.4}
-.bp-map-hint{font-size:10px;color:var(--muted);text-align:center;margin-top:4px}
-/* Scan tab placeholder */
-.bp-scan-soon{padding:24px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:1.5}
-.bp-scan-soon .ico{font-size:36px;opacity:.4;margin-bottom:10px}
-/* Picker footer cancel */
-.bp-cancel{width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:12px;font-family:var(--sans);font-weight:600;cursor:pointer;-webkit-appearance:none;margin-top:10px;touch-action:manipulation}
-
-/* ── ACTIVE BIN BANNER (p4.0) ─────────────────────────────────── */
-.binbar{background:linear-gradient(90deg,rgba(0,212,170,.12),rgba(0,212,170,.04));border-bottom:1px solid var(--bdr);padding:8px 14px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;font-family:var(--mono);font-size:12px}
-.binbar.none{background:linear-gradient(90deg,rgba(255,149,0,.12),rgba(255,149,0,.04))}
-.binbar-label{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:10px}
-.binbar-val{color:var(--acc);font-weight:800;font-size:14px;margin-left:6px;letter-spacing:.04em}
-.binbar.none .binbar-val{color:var(--warn)}
-.binbar-change{background:transparent;color:var(--acc2);border:none;font-size:11px;text-decoration:underline;cursor:pointer;font-family:var(--sans);font-weight:600;padding:2px 4px;-webkit-appearance:none;touch-action:manipulation}
-
 </style>
 </head>
 <body>
@@ -241,15 +192,17 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   </div>
 </div>
 
-<!-- RESUME CARD (p3.5) — shown on boot if a recent session exists -->
+<!-- RESUME CARD (p3.5) — shown on boot if a recent session exists. p4.0 — variant for WH1-with-bin. -->
 <div id="resumeCard" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center;padding:20px;-webkit-align-items:center;-webkit-justify-content:center">
   <div style="background:var(--surf);border:2px solid var(--acc);border-radius:16px;padding:24px;width:100%;max-width:340px;text-align:center">
     <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Welcome back</div>
     <div id="rcName" style="font-size:24px;font-weight:900;color:var(--txt);margin-bottom:4px;line-height:1.15">—</div>
     <div id="rcCtx" style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.4">Continuing as counter for <b id="rcWh" style="color:var(--acc)">—</b></div>
-    <button onclick="resumeContinue()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;touch-action:manipulation">Continue</button>
-    <button onclick="resumeSwitchCounter()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:11px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px">Switch counter</button>
-    <a href="javascript:void(0)" onclick="resumeFullReset()" style="display:block;font-size:11px;color:var(--muted);text-decoration:underline;opacity:.7">Switch warehouse instead</a>
+    <button id="rcContinueBtn" onclick="resumeContinue()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;touch-action:manipulation">Continue</button>
+    <!-- p4.0 — WH1-with-bin variant shows "Change zone" instead of Switch counter/warehouse -->
+    <button id="rcChangeZoneBtn" onclick="resumeChangeZone()" style="display:none;width:100%;background:transparent;color:var(--acc);border:1px solid var(--acc);border-radius:8px;padding:11px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px">Change zone</button>
+    <button id="rcSwitchCounterBtn" onclick="resumeSwitchCounter()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:11px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px">Switch counter</button>
+    <a id="rcSwitchWhLink" href="javascript:void(0)" onclick="resumeFullReset()" style="display:block;font-size:11px;color:var(--muted);text-decoration:underline;opacity:.7">Switch warehouse instead</a>
   </div>
 </div>
 
@@ -316,50 +269,6 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   </div>
 </div>
 
-<!-- BIN PICKER MODAL (p4.0) — shown after warehouse confirm, and via Change link.
-     Three tabs: List (buttons), Map (clickable image), Scan (disabled, Stage 3).
-     Bins/maps configured in BIN_CONFIG (top of script). Sub-bins handled inline. -->
-<div id="binPicker">
-  <div class="bp-box">
-    <div class="bp-title">Select your bin</div>
-    <div class="bp-sub">Where are you counting right now? You can change this anytime by tapping the bin banner.</div>
-    <div class="bp-active" id="bpActive"></div>
-    <div class="bp-tabs">
-      <button class="bp-tab on" id="bpTabList" onclick="bpSwitchTab('list')">List</button>
-      <button class="bp-tab" id="bpTabMap" onclick="bpSwitchTab('map')">Map</button>
-      <button class="bp-tab disabled" id="bpTabScan" onclick="bpScanComingSoon()">Scan</button>
-    </div>
-    <!-- LIST PANEL -->
-    <div class="bp-pnl on" id="bpPnlList">
-      <div class="bp-grid" id="bpGrid"></div>
-      <button class="bp-other" id="bpOtherBtn" onclick="bpShowOther()">Other / custom bin…</button>
-      <input class="bp-other-in" id="bpOtherIn" type="text" placeholder="Type bin code (e.g. 9A)" autocomplete="off" autocorrect="off" autocapitalize="characters" maxlength="12" onkeydown="if(event.keyCode===13){event.preventDefault();bpApplyOther()}">
-      <!-- Sub-bin sub-picker (shown when a parent bin has subs defined) -->
-      <div class="bp-sub-wrap" id="bpSubWrap">
-        <div class="bp-sub-title" id="bpSubTitle">Sub-bin</div>
-        <div class="bp-sub-grid" id="bpSubGrid"></div>
-      </div>
-    </div>
-    <!-- MAP PANEL -->
-    <div class="bp-pnl" id="bpPnlMap">
-      <div class="bp-map-wrap" id="bpMapWrap">
-        <img class="bp-map-img" id="bpMapImg" alt="Warehouse map" onerror="bpMapFail()">
-        <!-- clickable regions injected here -->
-      </div>
-      <div class="bp-map-hint">Tap a bin region on the map</div>
-    </div>
-    <!-- SCAN PANEL (placeholder) -->
-    <div class="bp-pnl" id="bpPnlScan">
-      <div class="bp-scan-soon">
-        <div class="ico">&#128290;</div>
-        <div><b>Scan tag — coming soon</b></div>
-        <div style="margin-top:6px">Bin tags are being printed and assigned. Use the List or Map for now.</div>
-      </div>
-    </div>
-    <button class="bp-cancel" id="bpCancelBtn" onclick="bpCancel()" style="display:none">Cancel (keep current bin)</button>
-  </div>
-</div>
-
 <header>
   <div class="logo">SCL<span id="hsub">Inventory Count</span></div>
   <div class="hdr-right">
@@ -369,17 +278,31 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
     <div class="pill">Counted: <b id="cnt">0</b></div>
   </div>
 </header>
+
+<!-- p4.0 — BIN BAR (WH1 only). Shows active bin + Change button. Sits between header and tabs. -->
+<div id="binBar" style="display:none;background:var(--surf2);border-bottom:1px solid var(--bdr);padding:8px 14px;align-items:center;-webkit-align-items:center;justify-content:space-between;-webkit-justify-content:space-between;gap:10px">
+  <div id="binBarLabel" style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--warn);letter-spacing:.04em;flex:1;-webkit-flex:1">📍 BIN: —</div>
+  <button id="binBarChange" onclick="openBinPicker()" style="background:transparent;color:var(--acc);border:1px solid var(--acc);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation;white-space:nowrap">Change</button>
+</div>
+
 <div class="tabs" id="tabs">
   <div class="tab on" id="tCount" onclick="switchTab('count')">&#128230; Count</div>
   <div class="tab" id="tLog" onclick="switchTab('log')">&#128203; My Log</div>
   <div class="tab" id="tSup" onclick="switchTab('sup')" style="display:none">&#128065; Live</div>
 </div>
-<!-- ACTIVE BIN BANNER (p4.0) — shown when a counter is logged in (not supervisor) -->
-<div class="binbar" id="binBar" style="display:none">
-  <div><span class="binbar-label">Counting in</span><span class="binbar-val" id="binBarVal">—</span></div>
-  <button class="binbar-change" onclick="openBinPicker(true)">Change</button>
-</div>
 <div id="offbanner"></div>
+
+<!-- p4.0 — BIN PICKER OVERLAY (WH1 only). Full-screen modal containing the WH1 map. -->
+<div id="binPicker" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9995;overflow-y:auto;-webkit-overflow-scrolling:touch">
+  <div style="position:sticky;top:0;background:var(--surf);border-bottom:1px solid var(--bdr);padding:14px 16px;display:flex;-webkit-display:flex;align-items:center;-webkit-align-items:center;justify-content:space-between;-webkit-justify-content:space-between;z-index:10">
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:2px">WH1 — COLLINS</div>
+      <div style="font-size:18px;font-weight:900;color:var(--acc);line-height:1.1">Pick your bin location</div>
+    </div>
+    <button id="binPickerClose" onclick="closeBinPicker()" style="display:none;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">Cancel</button>
+  </div>
+  <div id="binPickerHost" style="padding:14px"></div>
+</div>
 
 <!-- COUNT PANEL -->
 <div class="pnl on" id="pCount">
@@ -534,120 +457,13 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 
 <script>var PRODUCTS=[];</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- p4.0 — WH1 Bin Map module. Loaded as separate file; exposes window.WH1Map.render() -->
+<script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0 · 2026-05-14';
+var APP_VERSION='p4.0 · 2026-05-18';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
-
-// ── BIN CONFIGURATION (p4.0) ──────────────────────────────────────────
-// Edit this object to add/change bins for each warehouse.
-//   key  = warehouse number (matches whsel <option value>)
-//   map  = path to warehouse map image, relative to this file
-//          (e.g. './wh1_map.png' = file sits next to index.html in repo root)
-//   bins = array of bin objects:
-//          { code, label, subs, map }
-//          - code:  short string stamped onto entries. No spaces. (e.g. '7', '15', '9A')
-//          - label: text shown on List button (e.g. 'Bin 7')
-//          - subs:  optional array of sub-bin codes for finer location (e.g. ['9A','9B','9C'])
-//                   Empty array = no sub-bin picker shown. Stage 1 = leave empty.
-//          - map:   array of clickable regions on the map image, in % of image dimensions:
-//                   [{x, y, w, h}, ...]   (x/y = top-left corner; w/h = width/height; 0–100)
-//                   Multiple regions per bin = bin physically appears in multiple spots.
-//                   Empty array = bin not on map (won't have clickable region).
-//
-// To add a new warehouse: add an entry. App falls back to "no bins configured" if missing.
-// To change the map image: replace the file at `map` path and redeploy.
-// To add sub-bins to an existing bin: populate its `subs` array. No other code changes needed.
-var BIN_CONFIG = {
-  '1': {
-    map: './wh1_map.png',
-    bins: [
-      // Numbered bins (read off the WH1 warehouse map). Bin 9 appears in multiple
-      // physical locations (top row + tank farms + middle block) → multiple map regions.
-      // Map coords below are best-guess starting values from the layout image —
-      // fine-tune them on-device by tapping and adjusting x/y/w/h percentages.
-      { code: '2',  label: 'Bin 2',  subs: [], map: [
-          {x:64, y:88, w:14, h:4}
-      ]},
-      { code: '3',  label: 'Bin 3',  subs: [], map: [
-          {x:62, y:62, w:14, h:3 },
-          {x:48, y:69, w:30, h:7 },
-          {x:78, y:69, w:14, h:7 },
-          {x:64, y:84, w:14, h:4 }
-      ]},
-      { code: '4',  label: 'Bin 4',  subs: [], map: [
-          {x:18, y:69, w:6,  h:10},
-          {x:26, y:69, w:9,  h:9 }
-      ]},
-      { code: '5',  label: 'Bin 5',  subs: [], map: [
-          {x:21, y:50, w:9,  h:3 },
-          {x:21, y:57, w:9,  h:3 },
-          {x:40, y:48, w:8,  h:10}
-      ]},
-      { code: '6',  label: 'Bin 6',  subs: [], map: [
-          {x:60, y:47, w:32, h:3 },
-          {x:60, y:55, w:32, h:3 }
-      ]},
-      { code: '7',  label: 'Bin 7',  subs: [], map: [
-          {x:21, y:29, w:9,  h:3 },
-          {x:21, y:36, w:9,  h:7 },
-          {x:21, y:46, w:9,  h:3 },
-          {x:39, y:32, w:9,  h:3 },
-          {x:39, y:39, w:9,  h:3 }
-      ]},
-      { code: '8',  label: 'Bin 8',  subs: [], map: [
-          {x:0,  y:25, w:5,  h:32},
-          {x:88, y:18, w:5,  h:25},
-          {x:36, y:7,  w:6,  h:5 }
-      ]},
-      { code: '9',  label: 'Bin 9',  subs: [], map: [
-          {x:22, y:7,  w:6,  h:5 },
-          {x:30, y:7,  w:6,  h:5 },
-          {x:44, y:7,  w:6,  h:5 },
-          {x:52, y:7,  w:6,  h:5 },
-          {x:32, y:18, w:5,  h:7 },
-          {x:42, y:55, w:5,  h:8 },
-          {x:54, y:55, w:5,  h:8 },
-          {x:60, y:18, w:32, h:10}
-      ]},
-      { code: '10', label: 'Bin 10', subs: [], map: [
-          {x:24, y:69, w:11, h:14},
-          {x:37, y:69, w:8,  h:14}
-      ]},
-      { code: '12', label: 'Bin 12', subs: [], map: [
-          {x:6,  y:22, w:33, h:3 },
-          {x:21, y:29, w:9,  h:3 },
-          {x:21, y:33, w:9,  h:3 },
-          {x:39, y:29, w:9,  h:3 },
-          {x:39, y:36, w:9,  h:3 }
-      ]},
-      { code: '15', label: 'Bin 15', subs: [], map: [
-          // Top-left corner — was labeled C1/C2/C3/C4 on the original map.
-          // Sub-bins NOT yet split out; will become subs:['15A','15B','15C','15D'] later.
-          {x:5,  y:3,  w:3,  h:3 },
-          {x:9,  y:3,  w:3,  h:3 },
-          {x:13, y:3,  w:3,  h:3 },
-          {x:17, y:3,  w:3,  h:3 }
-      ]}
-    ]
-  }
-  // Other warehouses will be added with their own maps & bin lists.
-  // Until then, counters at those warehouses get the "Other / custom" fallback.
-};
-
-// ── BIN PICKER STATE (p4.0) ───────────────────────────────────────────
-// Active bin for the current counting session. Set after the picker closes.
-//   activeBin     = bin code (e.g. '7', '15', 'OTHER:rack-A')
-//   activeBinSub  = sub-bin code if applicable (e.g. '9A'), else ''
-//   activeBinTag  = scanned tag id if applicable (Stage 3, not used yet)
-// All three persist in the session record; they ride along on every entry.
-var activeBin = '';
-var activeBinSub = '';
-var activeBinTag = '';
-// Transient state while picker is open. Used by sub-bin sub-picker.
-var _bpPickedBin = null;       // the bin object the user just tapped
-var _bpReopenable = false;     // true = picker was opened via "Change" link (allow cancel back)
 
 // ── SUPERVISORS ───────────────────────────────────────────────────────
 // EDIT THIS LIST TO ADD/REMOVE SUPERVISORS. Names matched case-insensitive,
@@ -678,10 +494,7 @@ function saveSession(){
       workerName: workerName,
       selectedWh: selectedWh,
       isSup: isSup,
-      // p4.0 — persist active bin so reload/resume keeps the counter on the same bin
-      bin: activeBin || '',
-      binSub: activeBinSub || '',
-      binTag: activeBinTag || '',
+      selectedBin: selectedBin || '',  // p4.0 — persist active bin (WH1 only; empty for others)
       ts: Date.now()
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
@@ -721,11 +534,8 @@ function touchSession(){
 // To rotate: paste new hash strings here, redeploy. Active gate flags
 // stay valid for the same browser/user until the 3-day cap; if you want
 // to force everyone to re-auth immediately, also bump GATE_REVISION.
-// Counter password: SCLtest  (SHA-256 of plaintext)
-var COUNTER_PWD_HASH    = '515147d07edec535b81cbec0699f005d15fc11c3ae8132013645e2d024f1957b';
-// Supervisor: not set yet — sentinel value (no password can match). Replace with
-// a real 64-char SHA-256 hex when you assign a supervisor password.
-var SUPERVISOR_PWD_HASH = 'SUPERVISOR_NOT_SET______________________________________________';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
+var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 var GATE_REVISION = 1;  // bump to invalidate all existing gate flags
 var GATE_KEY = 'scl_inv_gate';
 var GATE_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;  // 3 days, matches session
@@ -818,25 +628,11 @@ var store = {
 };
 // p3.4 — warehouse+worker-scoped entry keys.
 // OLD format: e_<PRODUCT_PAK>                       (cross-contaminates across WH/workers)
-// p3.4 fmt:   e_<wh>_<normWorker>_<PRODUCT_PAK>     (isolated per session context)
-// p4.0 fmt:   e_<wh>_<normWorker>_<PRODUCT_PAK>__B<bin>
-//             Same product can be counted in multiple bins → multiple entries.
-//             '__B' separator chosen so it's distinct from underscores inside skey().
-//             Empty bin = '__BNONE' (legacy/pre-bin entries OR no bin selected).
+// NEW format: e_<wh>_<normWorker>_<PRODUCT_PAK>     (isolated per session context)
 // normWorker = lowercase, alphanumeric only — matches "Daniel Doan" === "daniel doan"
 function normWorker(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 function entryKeyPrefix(wh, worker){ return 'e_' + String(wh) + '_' + normWorker(worker) + '_'; }
-// p4.0 — bin code normalized for use inside the key. Strip everything but alphanumerics.
-// 'OTHER:rack-A' → 'OTHERrackA'. Empty → 'NONE'. Keeps the parser unambiguous.
-function normBin(b){
-  var s = String(b||'').replace(/[^a-zA-Z0-9]/g,'');
-  return s ? s.toUpperCase() : 'NONE';
-}
-function entryKey(wh, worker, k, binCode){
-  // binCode optional for compat with old call sites. If omitted, use activeBin.
-  var b = (typeof binCode === 'string' || typeof binCode === 'number') ? String(binCode) : activeBin;
-  return entryKeyPrefix(wh, worker) + skey(k) + '__B' + normBin(b);
-}
+function entryKey(wh, worker, k){ return entryKeyPrefix(wh, worker) + skey(k); }
 function _storeOp(op,k,v){
   return new Promise(function(res){
     var sk = PFX+k;
@@ -1306,6 +1102,10 @@ var myLog={}, liveData={};
 var camStream=null, scanRAF=null, ZXing=null;
 var lastCode='', lastCodeTime=0;
 var scanTimer=null, syncIv=null;
+// p4.0 — Stage 1 Locations: selected bin from WH1 map picker. WH1 only; non-WH1 stays ''.
+var selectedBin='';
+var _wh1MapInstance=null;
+var _binPickerMode=''; // 'init' (first-time after confirmWh) or 'change' (mid-session from Change btn)
 
 // ── MODAL ─────────────────────────────────────────────────────────────
 var WH_LABELS={'1':'COLLINS','2':'RICHMOND','4':'LANCASTER','7':'SAN JOSE','9':'WATSONVILLE','11':'VISTA'};
@@ -1329,6 +1129,9 @@ function confirmWh(){
   document.getElementById('whConfirm').style.display='none';
   isSup=false;
   var wh=selectedWh, n=workerName;
+  // p4.0 — fresh confirmWh (not a resume) wipes any stale selectedBin so the picker re-asks.
+  // resumeContinue() bypasses this by calling _resumeIntoSession directly with selectedBin preserved.
+  if(!_resumeInFlight){ selectedBin=''; hideBinBar(); }
   loadInventoryForWh(wh).then(function(count){
     document.getElementById('modal').className='gone';
     document.getElementById('hsub').textContent=' — '+n;
@@ -1348,13 +1151,13 @@ function confirmWh(){
         // Make sure the submit button is visible since we have entries
         document.getElementById('submitBtn').style.display='block';
       }
-      // p4.0 — show bin picker if WH has bins configured AND no active bin yet.
-      // Resume flow may have already restored activeBin from the session — skip picker if so.
-      if(BIN_CONFIG[wh] && !activeBin){
-        openBinPicker(false);  // false = first-time, no Cancel button
+      // p4.0 — WH1 only: force bin picker before counting begins (unless resume already has one)
+      if(String(wh)==='1' && !selectedBin){
+        openBinPicker('init');
+      } else if(String(wh)==='1' && selectedBin){
+        showBinBar();
+        setTimeout(function(){document.getElementById('scanInput').focus();},300);
       } else {
-        // No bins configured for this WH, OR bin already set → straight to scan input
-        updateBinBar();
         setTimeout(function(){document.getElementById('scanInput').focus();},300);
       }
     });
@@ -1363,9 +1166,56 @@ function confirmWh(){
   });
 }
 
+// p4.0 — Bin picker flow. Renders wh1_map.js into #binPickerHost.
+// Mode 'init' = first time after confirmWh; required, no Cancel button.
+// Mode 'change' = mid-session via Change link or resume card; Cancel restores prior state.
+var _resumeInFlight=false;  // set by tryResume/resumeContinue so confirmWh keeps selectedBin
+function openBinPicker(mode){
+  _binPickerMode = mode || 'change';
+  var pickerEl = document.getElementById('binPicker');
+  var hostEl = document.getElementById('binPickerHost');
+  var closeBtn = document.getElementById('binPickerClose');
+  // 'change' mode allows cancel; 'init' mode does not (counter must pick a bin)
+  closeBtn.style.display = (_binPickerMode === 'change' && selectedBin) ? 'inline-block' : 'none';
+  // Clear any prior render and reinit the map
+  hostEl.innerHTML = '';
+  pickerEl.style.display = 'block';
+  if(typeof window.WH1Map === 'undefined' || !window.WH1Map.render){
+    toast('Map module not loaded','e');
+    pickerEl.style.display='none';
+    return;
+  }
+  _wh1MapInstance = window.WH1Map.render(hostEl, onBinConfirmed);
+}
+function closeBinPicker(){
+  // Cancel only valid in 'change' mode when a prior bin exists
+  if(_binPickerMode === 'change' && selectedBin){
+    document.getElementById('binPicker').style.display='none';
+  }
+}
+function onBinConfirmed(binCode){
+  if(!binCode) return;
+  selectedBin = String(binCode);
+  saveSession();
+  document.getElementById('binPicker').style.display='none';
+  showBinBar();
+  toast('Bin set: '+selectedBin,'s');
+  // Focus scan input if we're on the count tab
+  setTimeout(function(){
+    var si = document.getElementById('scanInput');
+    if(si && curTab==='count') si.focus();
+  },200);
+}
+function showBinBar(){
+  if(String(selectedWh)!=='1' || !selectedBin) return;
+  document.getElementById('binBarLabel').textContent = '📍 BIN: '+selectedBin;
+  document.getElementById('binBar').style.display='flex';
+}
+function hideBinBar(){
+  document.getElementById('binBar').style.display='none';
+}
+
 // p3.4 — restore myLog from persisted entries for the active (wh, worker).
-// p4.0 — myLog is now keyed by `PRODUCT|PAK|BIN` so same product in multiple bins
-//        appears as multiple entries. Legacy entries (no __B suffix) load with bin=''.
 // Returns a Promise<number> of entries restored. Also cleans up old-format
 // orphan keys (e_PRODUCT_PAK without wh/worker scoping) since they belong
 // to no known session — they were either already submitted or are stale.
@@ -1383,7 +1233,7 @@ function restoreMyLog(wh, worker){
         // store.list returns keys WITH the PFX prefix already attached
         var key = (typeof rawKey === 'string') ? rawKey : rawKey.name;
         if(key.indexOf(fullPrefix) === 0){
-          matches.push(key.substring(PFX.length));  // strip PFX, keep e_<wh>_<worker>_<skey>[__B<bin>]
+          matches.push(key.substring(PFX.length));  // strip PFX, keep e_<wh>_<worker>_<skey>
         } else if(key.indexOf(fullOldPrefix) === 0){
           // Anything else starting with e_. Distinguish:
           //   (a) ANOTHER session's scoped key like e_4_mike_WIDGET_EA — leave alone
@@ -1437,18 +1287,13 @@ function restoreMyLog(wh, worker){
                 NEW_NOTES: d.new_notes || null
               };
             }
-            // p4.0 — myLog key includes bin so same product in multiple bins = multiple rows
-            var binCode = d.location_bin || '';
-            var mk = (item.PRODUCT || d.product) + '|' + (item.PAK || d.pak || '') + '|' + binCode;
+            var mk = (item.PRODUCT || d.product) + '|' + (item.PAK || d.pak || '');
             myLog[mk] = {
               item: item,
               count: Number(d.count)||0,
               ts: d.ts || Date.now(),
               additions: Array.isArray(d.additions) && d.additions.length ? d.additions : [Number(d.count)||0],
-              // p4.0 — carry bin info on the in-memory entry for re-display and re-submit
-              location_bin: d.location_bin || '',
-              location_sub: d.location_sub || '',
-              location_tag: d.location_tag || ''
+              picked_bin: d.picked_bin || null  // p4.0
             };
           } catch(e){ /* skip unparseable */ }
         });
@@ -1491,25 +1336,39 @@ function startSupervisor(){
   switchTab('sup');
 }
 
-// p3.5 — resume from saved session
+// p3.5 — resume from saved session. p4.0 — adds WH1-with-bin variant.
 function tryResume(){
   var s = loadSession();
   if(!s) return false;
   workerName = s.workerName;
   selectedWh = s.selectedWh || '';
   isSup = !!s.isSup;
-  // p4.0 — restore bin state from session
-  activeBin    = s.bin    || '';
-  activeBinSub = s.binSub || '';
-  activeBinTag = s.binTag || '';
+  selectedBin = (s.selectedBin || '');  // p4.0 — restore saved bin (empty for non-WH1 or never-picked)
   // Populate resume card
   document.getElementById('rcName').textContent = s.workerName;
+  // p4.0 — three resume variants
+  var rcChangeZoneBtn = document.getElementById('rcChangeZoneBtn');
+  var rcSwitchCounterBtn = document.getElementById('rcSwitchCounterBtn');
+  var rcSwitchWhLink = document.getElementById('rcSwitchWhLink');
   if(s.isSup){
     document.getElementById('rcCtx').innerHTML = 'Continuing as <b style="color:var(--acc)">Supervisor</b>';
-    // rcWh element no longer exists after the innerHTML replacement above; nothing to hide
+    rcChangeZoneBtn.style.display = 'none';
+    rcSwitchCounterBtn.style.display = '';
+    rcSwitchWhLink.style.display = 'block';
+  } else if(String(s.selectedWh)==='1' && s.selectedBin){
+    // WH1-with-bin variant: ONLY Continue + Change zone. No Switch counter/warehouse.
+    var whLabel = 'WH1 — COLLINS · Bin: '+s.selectedBin;
+    document.getElementById('rcCtx').innerHTML = 'Continuing as counter for <b style="color:var(--acc)">'+whLabel+'</b>';
+    rcChangeZoneBtn.style.display = '';
+    rcSwitchCounterBtn.style.display = 'none';
+    rcSwitchWhLink.style.display = 'none';
   } else {
-    var whLabel = 'WH'+s.selectedWh+' — '+(WH_LABELS[s.selectedWh]||'');
-    document.getElementById('rcCtx').innerHTML = 'Continuing as counter for <b id="rcWh" style="color:var(--acc)">'+whLabel+'</b>';
+    // Default counter variant
+    var whLabel2 = 'WH'+s.selectedWh+' — '+(WH_LABELS[s.selectedWh]||'');
+    document.getElementById('rcCtx').innerHTML = 'Continuing as counter for <b id="rcWh" style="color:var(--acc)">'+whLabel2+'</b>';
+    rcChangeZoneBtn.style.display = 'none';
+    rcSwitchCounterBtn.style.display = '';
+    rcSwitchWhLink.style.display = 'block';
   }
   document.getElementById('resumeCard').style.display='flex';
   return true;
@@ -1519,9 +1378,21 @@ function resumeContinue(){
   if(isSup){
     startSupervisor();
   } else {
-    // Run the same flow as confirmWh — load inventory, restore entries
+    // p4.0 — flag resume so confirmWh preserves selectedBin instead of wiping it
+    _resumeInFlight = true;
     confirmWh();
+    _resumeInFlight = false;
   }
+}
+// p4.0 — Change zone from resume card (WH1-with-bin variant). Continue load, then auto-open picker.
+function resumeChangeZone(){
+  document.getElementById('resumeCard').style.display='none';
+  _resumeInFlight = true;
+  // Wipe the saved bin so confirmWh's normal WH1 path triggers the picker
+  selectedBin = '';
+  saveSession();
+  confirmWh();
+  _resumeInFlight = false;
 }
 function resumeSwitchCounter(){
   // Keep WH (or supervisor mode), but re-prompt for name
@@ -1564,8 +1435,9 @@ function applySwitchCounter(){
   var n = (document.getElementById('scName').value||'').trim();
   if(!n){ toast('Enter a name','w'); return; }
   workerName = n;
-  // p4.0 — clear bin for the new counter; they pick their own
-  activeBin = ''; activeBinSub = ''; activeBinTag = '';
+  // p4.0 — switching counter clears the previous counter's bin; new counter must pick.
+  selectedBin = '';
+  hideBinBar();
   saveSession();
   document.getElementById('switchCounterModal').style.display='none';
 
@@ -1580,12 +1452,11 @@ function applySwitchCounter(){
     renderMiniLog();
     renderLog();
     document.getElementById('hsub').textContent = ' — '+n;
-    updateBinBar();
     restoreMyLog(selectedWh, n).then(function(restored){
       toast('Now counting as '+n + (restored>0 ? ' · '+restored+' recovered' : ''), 's');
-      // p4.0 — new counter needs to pick a bin
-      if(BIN_CONFIG[selectedWh] && !activeBin){
-        openBinPicker(false);
+      // p4.0 — WH1: new counter must pick their own bin
+      if(String(selectedWh)==='1'){
+        openBinPicker('init');
       }
     });
   } else {
@@ -1685,12 +1556,7 @@ function showMatch(item){
   document.getElementById('moh').textContent=item.ON_HAND;
   document.getElementById('mbin').textContent=item.BIN_LOC||'—';
   document.getElementById('moo').textContent=item.OPEN_ORDERS;
-  // p4.0 — myLog is keyed by `PRODUCT|PAK|BIN`. Prior-count detection (which drives
-  // the Add/Replace UI) must use the same 3-part key, otherwise a re-scanned product
-  // is always treated as fresh and the Add/Replace pair never appears. Bin-scoped
-  // matching is also semantically correct: same product in same bin = update;
-  // same product in a different bin = new entry.
-  var k=item.PRODUCT+'|'+item.PAK+'|'+(activeBin||'');
+  var k=item.PRODUCT+'|'+item.PAK;
   var ci=document.getElementById('ci');
   var prior=myLog[k];
   var prevRow=document.getElementById('prevCountRow');
@@ -1746,8 +1612,7 @@ function _doSaveCount(mode){
   if(n>COUNT_SANITY_MAX){
     if(!confirm('Count of '+n+' is unusually large. Are you sure?')) return;
   }
-  // p4.0 — myLog key now includes active bin. Same product in 2 bins = 2 entries.
-  var k=curItem.PRODUCT+'|'+curItem.PAK+'|'+(activeBin||'');
+  var k=curItem.PRODUCT+'|'+curItem.PAK;
   var prior=myLog[k];
   var newTotal=n;
   var additions=[n];
@@ -1764,16 +1629,7 @@ function _doSaveCount(mode){
       actionLabel='Replaced';
     }
   }
-  myLog[k]={
-    item:curItem,
-    count:newTotal,
-    ts:Date.now(),
-    additions:additions,
-    // p4.0 — stamp current bin onto the entry so it's preserved on reload & submit
-    location_bin: activeBin || '',
-    location_sub: activeBinSub || '',
-    location_tag: activeBinTag || ''
-  };
+  myLog[k]={item:curItem,count:newTotal,ts:Date.now(),additions:additions,picked_bin:(selectedBin||null)};
   document.getElementById('cnt').textContent=Object.keys(myLog).length;
   renderMiniLog();
   pushEntry(k,myLog[k]);
@@ -1936,17 +1792,14 @@ function saveNewItem(){
     NEW_NOTES: notes
   };
   // Build dedup key:
-  //   - If product code provided: PRODUCT|PAK|BIN (collision check works, bin-scoped per p4.0)
+  //   - If product code provided: PRODUCT|PAK (collision check works)
   //   - If empty: synthetic per-entry key based on timestamp so multiple no-code items don't overwrite
-  // p4.0 — keys include bin so the same new-item code in different bins becomes
-  //        separate entries (matches the regular scan path behavior).
   var k;
   if(code){
-    k=code+'|'+pak+'|'+(activeBin||'');
+    k=code+'|'+pak;
   } else {
-    // Synthetic key — unique per save; description+pak+timestamp keeps it human-readable in dev tools.
-    // Bin appended so each gets a clean 3-part shape (matches submit-clear / delete parsing).
-    k='__NEW__|'+pak+'|'+desc.substring(0,20)+'-'+Date.now()+'|'+(activeBin||'');
+    // Synthetic key — unique per save; description+pak+timestamp keeps it human-readable in dev tools
+    k='__NEW__|'+pak+'|'+desc.substring(0,20)+'|'+Date.now();
   }
   // Collision handling for explicit codes only
   if(code && myLog[k]){
@@ -1956,26 +1809,15 @@ function saveNewItem(){
       // Add
       var newTotal=(prior.count||0)+n;
       var additions=(prior.additions||[prior.count||0]).concat([n]);
-      myLog[k]={
-        item:item,count:newTotal,ts:Date.now(),additions:additions,
-        // p4.0 — preserve location stamp on update
-        location_bin: activeBin||'', location_sub: activeBinSub||'', location_tag: activeBinTag||''
-      };
+      myLog[k]={item:item,count:newTotal,ts:Date.now(),additions:additions,picked_bin:(selectedBin||null)};
       toast('Added: '+code+' = '+newTotal,'s');
     } else {
       // Replace
-      myLog[k]={
-        item:item,count:n,ts:Date.now(),additions:[n],
-        location_bin: activeBin||'', location_sub: activeBinSub||'', location_tag: activeBinTag||''
-      };
+      myLog[k]={item:item,count:n,ts:Date.now(),additions:[n],picked_bin:(selectedBin||null)};
       toast('Replaced: '+code+' = '+n,'s');
     }
   } else {
-    myLog[k]={
-      item:item,count:n,ts:Date.now(),additions:[n],
-      // p4.0 — stamp location on every new-item save
-      location_bin: activeBin||'', location_sub: activeBinSub||'', location_tag: activeBinTag||''
-    };
+    myLog[k]={item:item,count:n,ts:Date.now(),additions:[n],picked_bin:(selectedBin||null)};
     toast('Added new item: '+(code||'(no code)'),'s');
   }
   document.getElementById('cnt').textContent=Object.keys(myLog).length;
@@ -1999,23 +1841,10 @@ function saveNewItem(){
 // p3.5 — escape string for use inside an HTML attribute wrapped in double quotes
 function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 // p3.6 — tap a recent-list row to add more to that item (re-opens it as if scanned).
-// p4.0 — also switches the active bin to that entry's bin so the next save lands
-//        on the same row (otherwise tapping a different-bin row + saving would
-//        create yet another row keyed by the current active bin).
 function tapToAdd(k){
   var e = myLog[k];
   if(!e || !e.item) return;
   if(curTab !== 'count') switchTab('count');
-  // p4.0 — if the tapped entry has a bin that differs from the active bin, switch.
-  var rowBin = e.location_bin || '';
-  if(rowBin !== (activeBin||'')){
-    activeBin = rowBin;
-    activeBinSub = e.location_sub || '';
-    activeBinTag = e.location_tag || '';
-    saveSession();
-    updateBinBar();
-    toast('Bin set to '+(rowBin||'(none)')+' to match this row');
-  }
   document.getElementById('scanInput').value='';
   showMatch(e.item);
 }
@@ -2025,16 +1854,12 @@ function renderMiniLog(){
   var t=document.getElementById('miniLog');
   t.style.display=ents.length?'table':'none';
   document.getElementById('mlBody').innerHTML=ents.slice().reverse().slice(0,6).map(function(e){
-    // p4.0 — key now PRODUCT|PAK|BIN to match the new myLog keying
-    var k=e.item.PRODUCT+'|'+e.item.PAK+'|'+(e.location_bin||''), ks=escAttr(k);
+    var k=e.item.PRODUCT+'|'+e.item.PAK, ks=escAttr(k);
     var adds=e.additions||[];
     var countDisp=e.count;
     if(adds.length>1) countDisp=e.count+'<span style="color:var(--muted);font-size:9px;margin-left:3px">&times;'+adds.length+'</span>';
-    // p4.0 — show bin badge inline so two rows of the same product are visually distinct
-    var binTxt = e.location_bin ? e.location_bin : '—';
-    var binBadge = '<span style="display:inline-block;background:rgba(0,212,170,.12);color:var(--acc);font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:4px;letter-spacing:.04em">'+binTxt+'</span>';
     // p3.6 — entire row tappable (calls tapToAdd); × button stops propagation so it only deletes.
-    return '<tr style="cursor:pointer" onclick="tapToAdd(&#39;'+ks+'&#39;)"><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+binBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td><button class="xbtn" onclick="event.stopPropagation();delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
+    return '<tr style="cursor:pointer" onclick="tapToAdd(&#39;'+ks+'&#39;)"><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td><button class="xbtn" onclick="event.stopPropagation();delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
   }).join('');
 }
 function renderLog(){
@@ -2044,18 +1869,14 @@ function renderLog(){
   t.style.display=ents.length?'table':'none';
   document.getElementById('ltBody').innerHTML=ents.slice().reverse().map(function(e){
     var d=e.count-e.item.ON_HAND, dc=d>0?'dp':d<0?'dn':'dz', ds=d>0?'+'+d:d===0?'—':d;
-    // p4.0 — key includes bin
-    var k=e.item.PRODUCT+'|'+e.item.PAK+'|'+(e.location_bin||''), ks=escAttr(k);
+    var k=e.item.PRODUCT+'|'+e.item.PAK, ks=escAttr(k);
     var newBadge=e.item.NEW_PRODUCT?'<span style="background:var(--acc2);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;margin-left:5px;letter-spacing:.05em">NEW</span>':'';
-    // p4.0 — bin badge so multiple-bin rows are visually distinct
-    var binTxt = e.location_bin ? e.location_bin : '—';
-    var binBadge = '<span style="display:inline-block;background:rgba(0,212,170,.12);color:var(--acc);font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:5px;letter-spacing:.04em">'+binTxt+'</span>';
     // Multi-add breakdown — show "total (a+b+c)" only when there are 2+ additions
     var adds=e.additions||[];
     var countDisp=e.count;
     if(adds.length>1) countDisp=e.count+' <span style="color:var(--muted);font-size:10px">('+adds.join('+')+')</span>';
     // p3.6 — entire row tappable (calls tapToAdd); × button stops propagation so it only deletes.
-    return '<tr style="cursor:pointer" onclick="tapToAdd(&#39;'+ks+'&#39;)"><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+newBadge+binBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="event.stopPropagation();delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
+    return '<tr style="cursor:pointer" onclick="tapToAdd(&#39;'+ks+'&#39;)"><td class="tp">'+(e.item.PRODUCT||'<span style="color:var(--muted)">(no code)</span>')+newBadge+'</td><td style="font-family:var(--mono);color:var(--muted);font-size:10px">'+(e.item.PAK||'—')+'</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.item.DESCRIPTION+'</td><td class="tc">'+countDisp+'</td><td class="toh">'+e.item.ON_HAND+'</td><td class="td '+dc+'">'+ds+'</td><td><button class="xbtn" onclick="event.stopPropagation();delEntry(&#39;'+ks+'&#39;)">&#10005;</button></td></tr>';
   }).join('');
 }
 function delEntry(k){
@@ -2063,29 +1884,19 @@ function delEntry(k){
   var e = myLog[k];
   var label = e && e.item ? (e.item.PRODUCT||'(no code)')+' — count '+e.count : 'this entry';
   if(!confirm('Delete '+label+'?')) return;
-  // p4.0 — capture bin BEFORE deleting from myLog so entryKey can build the right storage key
-  var entryBin = e && e.location_bin ? e.location_bin : '';
   delete myLog[k];
   document.getElementById('cnt').textContent=Object.keys(myLog).length;
   renderMiniLog(); renderLog();
-  // p4.0 — strip the |BIN tail from k before passing to entryKey (k is PRODUCT|PAK|BIN here;
-  // entryKey expects the PRODUCT|PAK part and takes bin as a separate arg).
-  var skeyPart = k.substring(0, k.lastIndexOf('|'));
-  store.del(entryKey(selectedWh, workerName, skeyPart, entryBin));
+  store.del(entryKey(selectedWh, workerName, k));
 }
 function clearLog(){
   if(!Object.keys(myLog).length)return;
   if(!confirm('Clear all your count entries?'))return;
-  var entries = Object.keys(myLog).map(function(k){
-    return { k: k, bin: (myLog[k] && myLog[k].location_bin) || '' };
-  });
+  var ks=Object.keys(myLog);
   myLog={};
   document.getElementById('cnt').textContent=0;
   renderMiniLog(); renderLog();
-  entries.forEach(function(en){
-    var skeyPart = en.k.substring(0, en.k.lastIndexOf('|'));
-    store.del(entryKey(selectedWh, workerName, skeyPart, en.bin));
-  });
+  ks.forEach(function(k){store.del(entryKey(selectedWh, workerName, k));});
 }
 
 // ── STORAGE HELPERS ───────────────────────────────────────────────────
@@ -2093,26 +1904,16 @@ function skey(k){ return k.replace(/\|/g,'_').replace(/[^a-zA-Z0-9_-]/g,''); }
 function pushEntry(k,e){
   // p3.4 — scoped per (warehouse, worker). Also persists additions for audit-trail recovery.
   // Need workerName + selectedWh to be set; both are set before counting starts.
-  // p4.0 — `k` arrives as `PRODUCT|PAK|BIN`. The bin is the third segment.
-  //        We pass it explicitly to entryKey so the storage key includes __B<bin>.
-  //        The skey() inside entryKey will strip the |BIN tail anyway (skey removes |
-  //        and non-alnum), but passing the bin separately is cleaner and lets us
-  //        keep PRODUCT|PAK as the canonical skey input.
-  var lastPipe = k.lastIndexOf('|');
-  var skeyPart = lastPipe >= 0 ? k.substring(0, lastPipe) : k;
-  var binPart  = lastPipe >= 0 ? k.substring(lastPipe+1) : (e.location_bin||'');
-  store.set(entryKey(selectedWh, workerName, skeyPart, binPart), JSON.stringify({
+  // p4.0 — picked_bin captured at submit-time so it survives bin changes mid-session.
+  store.set(entryKey(selectedWh, workerName, k), JSON.stringify({
     product:e.item.PRODUCT,pak:e.item.PAK,description:e.item.DESCRIPTION,
     on_hand:e.item.ON_HAND,vendor:e.item.VENDOR,vpcode:e.item.VPROD_CODE,
     bin_loc:e.item.BIN_LOC,bom:e.item.BOM,
     is_new: !!e.item.NEW_PRODUCT,
     new_notes: e.item.NEW_NOTES||null,
+    picked_bin: (e.picked_bin != null ? e.picked_bin : (selectedBin || null)),
     count:e.count, additions:e.additions||[e.count],
-    worker:workerName, wh:selectedWh, ts:e.ts,
-    // p4.0 — location fields ride along on every saved entry
-    location_bin: e.location_bin || '',
-    location_sub: e.location_sub || '',
-    location_tag: e.location_tag || ''
+    worker:workerName, wh:selectedWh, ts:e.ts
   })).then(function(){ setSyncDot('on'); }).catch(function(){ setSyncDot('err'); });
   touchSession();  // p3.5 — slide 3-day cap forward on activity
 }
@@ -2139,21 +1940,10 @@ function pullAll(){
         if(!raw)return;
         try{
           var d=JSON.parse(raw);
-          // p4.0 — live data keyed by product|pak|bin so the supervisor view shows
-          //        one row per (product, bin) pair instead of collapsing across bins
-          var binCode = d.location_bin || '';
-          var mk=d.product+'|'+(d.pak||'')+'|'+binCode;
+          var mk=d.product+'|'+(d.pak||'');
           var ms=findProds(d.product);
           var item=ms.filter(function(m){return m.PAK===(d.pak||'');})[0]||ms[0];
-          if(item)newLive[mk]={
-            item:item,
-            count:d.count,
-            worker:d.worker,
-            ts:d.ts,
-            location_bin: d.location_bin || '',
-            location_sub: d.location_sub || '',
-            location_tag: d.location_tag || ''
-          };
+          if(item)newLive[mk]={item:item,count:d.count,worker:d.worker,ts:d.ts};
         }catch(e2){}
       });
     });
@@ -2616,12 +2406,9 @@ function buildSubmitItems(){
       // Extra audit fields — Worker stores items as-is so these come along for free
       on_hand: (typeof it.ON_HAND==='number')?it.ON_HAND:null,
       bin_loc: it.BIN_LOC||null,
+      picked_bin: e.picked_bin || null,  // p4.0 — counter's bin selection from WH1 map
       new_notes: it.NEW_NOTES||null,
-      ts: e.ts||null,
-      // p4.0 — counter-scanned bin location at time of count
-      location_bin: e.location_bin || '',
-      location_sub: e.location_sub || '',
-      location_tag: e.location_tag || ''
+      ts: e.ts||null
     };
   });
 }
@@ -2687,40 +2474,7 @@ function doCloudSubmit(){
     myLog={};
     document.getElementById('cnt').textContent=0;
     renderMiniLog(); renderLog();
-    // p4.0 — keys are now `PRODUCT|PAK|BIN`. Split bin off before passing to entryKey
-    //        (entryKey takes bin as a separate arg; skey() inside it strips pipes).
-    //        Bug fix: previously this called entryKey(...k) without splitting the bin,
-    //        which built the wrong storage key and left zombie entries that reappeared
-    //        on refresh — a duplicate-submit risk.
-    ks.forEach(function(k){
-      try{
-        var lastPipe = k.lastIndexOf('|');
-        var skeyPart = lastPipe >= 0 ? k.substring(0, lastPipe) : k;
-        var binPart  = lastPipe >= 0 ? k.substring(lastPipe+1) : '';
-        store.del(entryKey(selectedWh, workerName, skeyPart, binPart));
-      }catch(e){}
-    });
-    // p4.0 — DEFENSIVE SWEEP. After targeted deletes, list all remaining `e_*` keys
-    //        scoped to this (wh, worker) and delete any that survived. Handles:
-    //          • old-format keys from a prior session that got picked up by restore
-    //          • partial-failure cases where one targeted delete errored silently
-    //          • entries that were saved to KV but never made it into the in-memory
-    //            myLog (e.g. write succeeded but the response was dropped)
-    //        Without this, refresh-after-submit could resurrect "phantom" entries.
-    try {
-      var prefix = entryKeyPrefix(selectedWh, workerName);
-      var fullPrefix = PFX + prefix;
-      store.list('e_').then(function(r){
-        if(!r || !r.keys) return;
-        r.keys.forEach(function(rawKey){
-          var key = (typeof rawKey === 'string') ? rawKey : rawKey.name;
-          if(key.indexOf(fullPrefix) === 0){
-            // Strip PFX so store.del gets the bare key
-            try{ store.del(key.substring(PFX.length)); }catch(e){}
-          }
-        });
-      }).catch(function(){});
-    } catch(e){}
+    ks.forEach(function(k){ try{store.del(entryKey(selectedWh, workerName, k));}catch(e){} });
     // Hide submit button (no entries left to submit)
     var sb=document.getElementById('submitBtn');
     if(sb) sb.style.display='none';
@@ -2814,214 +2568,6 @@ function doSubmitStep2(){
     +'&body='+body;
   closeSubmit();
 }
-
-// ── BIN PICKER FUNCTIONS (p4.0) ───────────────────────────────────────
-// Public entry points:
-//   openBinPicker(allowCancel) — open modal. allowCancel=true shows Cancel button
-//                                (used when re-opening via Change link, so the user
-//                                can back out without losing the current bin).
-//   updateBinBar()             — refresh the active-bin banner from globals
-//
-// Internal:
-//   bpSwitchTab, bpRenderList, bpRenderMap, bpPickBin, bpPickSub,
-//   bpApplyOther, bpCancel, bpMapFail, bpScanComingSoon
-function openBinPicker(allowCancel){
-  _bpReopenable = !!allowCancel;
-  var wh = selectedWh;
-  if(!BIN_CONFIG[wh]){
-    // No bins configured for this warehouse — show a one-shot prompt so the
-    // counter can still record SOMETHING (free-text bin via "Other") rather than
-    // get stuck. Stage 1 only has WH1; other WHs hit this path.
-    var custom = prompt('No bin map yet for WH'+wh+'. Type a bin code to use (or leave blank for none):');
-    if(custom !== null){
-      activeBin = String(custom).trim() ? String(custom).trim().toUpperCase() : '';
-      activeBinSub = '';
-      activeBinTag = '';
-      saveSession();
-      updateBinBar();
-    }
-    setTimeout(function(){document.getElementById('scanInput').focus();},150);
-    return;
-  }
-  // Reset transient state
-  _bpPickedBin = null;
-  document.getElementById('bpSubWrap').className='bp-sub-wrap';
-  document.getElementById('bpOtherIn').style.display='none';
-  document.getElementById('bpOtherIn').value='';
-  document.getElementById('bpOtherBtn').style.display='block';
-  // Active state display
-  var actEl = document.getElementById('bpActive');
-  if(activeBin){
-    var subTxt = activeBinSub ? ' / '+activeBinSub : '';
-    actEl.textContent = 'Currently counting in Bin '+activeBin+subTxt;
-    actEl.className = 'bp-active show';
-  } else {
-    actEl.className = 'bp-active';
-  }
-  // Cancel button only visible if re-opened mid-session
-  document.getElementById('bpCancelBtn').style.display = allowCancel ? 'block' : 'none';
-  // Reset to List tab
-  bpSwitchTab('list');
-  // Build grid
-  bpRenderList();
-  // Show modal
-  document.getElementById('binPicker').style.display='flex';
-}
-
-function bpSwitchTab(t){
-  ['list','map','scan'].forEach(function(name){
-    var tab = document.getElementById('bpTab'+name.charAt(0).toUpperCase()+name.slice(1));
-    var pnl = document.getElementById('bpPnl'+name.charAt(0).toUpperCase()+name.slice(1));
-    if(tab) tab.className = 'bp-tab' + (name===t?' on':'') + (name==='scan'?' disabled':'');
-    if(pnl) pnl.className = 'bp-pnl' + (name===t?' on':'');
-  });
-  if(t==='map') bpRenderMap();
-}
-
-function bpRenderList(){
-  var wh = selectedWh;
-  var cfg = BIN_CONFIG[wh];
-  if(!cfg) return;
-  var grid = document.getElementById('bpGrid');
-  grid.innerHTML='';
-  cfg.bins.forEach(function(bin){
-    var btn = document.createElement('button');
-    btn.className = 'bp-bin';
-    btn.textContent = bin.label;
-    btn.onclick = function(){ bpPickBin(bin); };
-    grid.appendChild(btn);
-  });
-}
-
-function bpPickBin(bin){
-  _bpPickedBin = bin;
-  // If this bin has sub-bins, show the sub-picker (user picks 9A/9B/etc, or "Just Bin X")
-  if(bin.subs && bin.subs.length){
-    var wrap = document.getElementById('bpSubWrap');
-    var sgrid = document.getElementById('bpSubGrid');
-    document.getElementById('bpSubTitle').textContent = 'Sub-bin for '+bin.label;
-    sgrid.innerHTML='';
-    bin.subs.forEach(function(sub){
-      var sb = document.createElement('button');
-      sb.className = 'bp-sub-btn';
-      sb.textContent = sub;
-      sb.onclick = function(){ bpApplyPick(bin.code, sub); };
-      sgrid.appendChild(sb);
-    });
-    var justBtn = document.createElement('button');
-    justBtn.className = 'bp-sub-btn';
-    justBtn.style.borderStyle = 'dashed';
-    justBtn.textContent = 'Just '+bin.label;
-    justBtn.onclick = function(){ bpApplyPick(bin.code, ''); };
-    sgrid.appendChild(justBtn);
-    wrap.className = 'bp-sub-wrap on';
-    return;
-  }
-  // No sub-bins → apply immediately
-  bpApplyPick(bin.code, '');
-}
-
-function bpApplyPick(code, sub){
-  activeBin = String(code);
-  activeBinSub = String(sub||'');
-  activeBinTag = '';  // tags are Stage 3
-  saveSession();
-  updateBinBar();
-  closeBinPicker();
-  var msg = 'Bin '+activeBin + (activeBinSub ? ' / '+activeBinSub : '');
-  toast(msg, 's');
-  setTimeout(function(){document.getElementById('scanInput').focus();},150);
-}
-
-function bpShowOther(){
-  document.getElementById('bpOtherBtn').style.display='none';
-  var inp = document.getElementById('bpOtherIn');
-  inp.style.display='block';
-  setTimeout(function(){ inp.focus(); }, 50);
-}
-
-function bpApplyOther(){
-  var v = (document.getElementById('bpOtherIn').value||'').trim().toUpperCase();
-  if(!v){ toast('Type a bin code first','w'); return; }
-  // Allow any alphanumeric custom code (e.g. "RACK-A1", "RECV", "9C")
-  activeBin = v;
-  activeBinSub = '';
-  activeBinTag = '';
-  saveSession();
-  updateBinBar();
-  closeBinPicker();
-  toast('Bin set to '+v, 's');
-  setTimeout(function(){document.getElementById('scanInput').focus();},150);
-}
-
-function bpCancel(){
-  // Re-opened from Change link without picking anything. Just close.
-  closeBinPicker();
-  setTimeout(function(){document.getElementById('scanInput').focus();},150);
-}
-
-function closeBinPicker(){
-  document.getElementById('binPicker').style.display='none';
-}
-
-function bpRenderMap(){
-  var wh = selectedWh;
-  var cfg = BIN_CONFIG[wh];
-  if(!cfg) return;
-  var img = document.getElementById('bpMapImg');
-  var wrap = document.getElementById('bpMapWrap');
-  // Remove any prior regions before re-rendering (keep the <img>)
-  var rgs = wrap.querySelectorAll('.bp-map-region');
-  for(var i=0;i<rgs.length;i++){ rgs[i].parentNode.removeChild(rgs[i]); }
-  // Set image source (may fail; onerror fires bpMapFail)
-  if(img.getAttribute('src') !== cfg.map){
-    img.setAttribute('src', cfg.map);
-  }
-  // Build clickable regions. Each bin can have multiple physical spots on the map.
-  cfg.bins.forEach(function(bin){
-    if(!bin.map || !bin.map.length) return;
-    bin.map.forEach(function(rect){
-      var rg = document.createElement('div');
-      rg.className = 'bp-map-region';
-      rg.style.left   = rect.x + '%';
-      rg.style.top    = rect.y + '%';
-      rg.style.width  = rect.w + '%';
-      rg.style.height = rect.h + '%';
-      rg.textContent = bin.code;
-      rg.onclick = function(){ bpPickBin(bin); };
-      wrap.appendChild(rg);
-    });
-  });
-}
-
-function bpMapFail(){
-  var wrap = document.getElementById('bpMapWrap');
-  wrap.innerHTML = '<div class="bp-map-err">Map image not loaded.<br>Check that <b>'+(BIN_CONFIG[selectedWh]&&BIN_CONFIG[selectedWh].map||'(map)')+'</b><br>exists in the deployed repo.<br><br>Use the <b>List</b> tab to pick a bin.</div>';
-}
-
-function bpScanComingSoon(){
-  toast('Bin tag scanning is coming soon — use List or Map for now','w');
-}
-
-function updateBinBar(){
-  var bar = document.getElementById('binBar');
-  if(!bar) return;
-  // Only show banner for counters (not supervisors) and only after login
-  if(isSup || !workerName || !selectedWh){
-    bar.style.display='none';
-    return;
-  }
-  bar.style.display='flex';
-  var val = document.getElementById('binBarVal');
-  if(activeBin){
-    bar.className = 'binbar';
-    val.textContent = 'Bin '+activeBin + (activeBinSub ? ' / '+activeBinSub : '');
-  } else {
-    bar.className = 'binbar none';
-    val.textContent = '(no bin selected)';
-  }
-}
-
 
 // ── SERVICE WORKER (inline, for PWA install) ──────────────────────────
 // Network-first for HTML (so updates land), cache-first for everything else
