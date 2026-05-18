@@ -70,7 +70,12 @@ var CSS = ''
 + '.wh1map-tbl td.sel{border-color:#5DCAA5!important;box-shadow:0 0 0 2px #5DCAA544}'
 + '.wh1map-tbl td.emp{background:transparent;cursor:default;border:none}'
 + '.wh1map-tbl td.wk{background:'+WK_BG+';cursor:default;border:none}'
-+ '.wh1map-tbl td.grey{background:#2a2a2a;cursor:default;border:none}';
++ '.wh1map-tbl td.grey{background:#2a2a2a;cursor:default;border:none}'
+// FIX (2026-05-18) — Ensure SVG <g> hit-test is reliable on iOS Safari when
+// embedded inside a parent app with global * { padding:0 } rules.
++ '.wh1map-wrap svg g[data-zone],.wh1map-wrap svg g[data-bin]{touch-action:manipulation;-webkit-tap-highlight-color:rgba(93,202,165,.25)}'
++ '.wh1map-wrap svg g[data-zone] rect,.wh1map-wrap svg g[data-bin] rect{pointer-events:auto}'
++ '.wh1map-wrap svg g[data-zone] text,.wh1map-wrap svg g[data-bin] text{pointer-events:none}';
 
 function injectCSS(){
   if(document.getElementById('wh1map-style')) return;
@@ -188,19 +193,33 @@ MapInstance.prototype.build = function(){
   this.ov = document.getElementById('wh1map-ov');
 
   // Wire up zone clicks and direct-bin clicks in SVG
+  // FIX (2026-05-18): iOS Safari often drops `click` on SVG <g>. Fire the action
+  // on touchend explicitly, and skip the synthetic click that follows.
   var svg = this.root.querySelector('[data-role="svg-wrap"] svg');
+  function bindTappable(el, handler){
+    var tapped = false;
+    el.addEventListener('touchstart', function(){ el.style.opacity='.72'; tapped=false; }, {passive:true});
+    el.addEventListener('touchend', function(ev){
+      el.style.opacity='1';
+      tapped = true;
+      if(ev.cancelable) ev.preventDefault();  // suppress the 300ms synthetic click
+      handler();
+      setTimeout(function(){ tapped=false; }, 350);
+    }, {passive:false});
+    el.addEventListener('touchcancel', function(){ el.style.opacity='1'; tapped=false; }, {passive:true});
+    el.addEventListener('click', function(){
+      if(tapped) return;
+      handler();
+    });
+  }
   svg.querySelectorAll('g[data-zone]').forEach(function(g){
-    g.addEventListener('click', function(){ self.openZone(g.getAttribute('data-zone')); });
-    g.addEventListener('touchstart', function(){ g.style.opacity='.72'; }, {passive:true});
-    g.addEventListener('touchend',   function(){ g.style.opacity='1'; });
+    bindTappable(g, function(){ self.openZone(g.getAttribute('data-zone')); });
   });
   svg.querySelectorAll('g[data-bin]').forEach(function(g){
-    g.addEventListener('click', function(){ self.pick(g.getAttribute('data-bin')); });
-    g.addEventListener('touchstart', function(){ g.style.opacity='.72'; }, {passive:true});
-    g.addEventListener('touchend',   function(){ g.style.opacity='1'; });
+    bindTappable(g, function(){ self.pick(g.getAttribute('data-bin')); });
   });
 
-  // Wire up side buttons (8A/8C/8D)
+  // Wire up side buttons (8A/8C/8D) — these are <button>, click works reliably
   this.root.querySelectorAll('button[data-bin]').forEach(function(b){
     b.addEventListener('click', function(){ self.pick(b.getAttribute('data-bin')); });
   });
