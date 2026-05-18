@@ -91,49 +91,49 @@ var SVG_MARKUP = ''
 + '<defs><pattern id="wh1-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">'
 + '<line x1="0" y1="0" x2="0" y2="6" stroke="#333" stroke-width="2"/></pattern></defs>'
 // Top row: Zone 5 | Zone 4A | 8B | Zone 4B
-+ '<g style="cursor:pointer" data-zone="z5"><rect x="2" y="2" width="62" height="50" rx="4" fill="#C8A882"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z5\')"><rect x="2" y="2" width="62" height="50" rx="4" fill="#C8A882"/>'
 + '<text x="33" y="21" font-family="Courier New" font-size="8" font-weight="700" fill="#3d2a10" text-anchor="middle">Zone 5</text>'
 + '<text x="33" y="33" font-family="Courier New" font-size="7" fill="#3d2a10" text-anchor="middle">15A·15B</text>'
 + '<text x="33" y="43" font-family="Courier New" font-size="7" fill="#3d2a10" text-anchor="middle">15C·15D</text></g>'
-+ '<g style="cursor:pointer" data-zone="z4a"><rect x="66" y="2" width="62" height="50" rx="4" fill="#E8D5F2"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z4a\')"><rect x="66" y="2" width="62" height="50" rx="4" fill="#E8D5F2"/>'
 + '<text x="97" y="21" font-family="Courier New" font-size="8" font-weight="700" fill="#3a1f5a" text-anchor="middle">Zone 4A</text>'
 + '<text x="97" y="33" font-family="Courier New" font-size="7" fill="#3a1f5a" text-anchor="middle">9A·9B·9C</text>'
 + '<text x="97" y="43" font-family="Courier New" font-size="7" fill="#3a1f5a" text-anchor="middle">9D·9E·9F</text></g>'
-+ '<g style="cursor:pointer" data-bin="8B"><rect x="130" y="2" width="16" height="50" rx="3" fill="#FAC775"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapPick(\'8B\')"><rect x="130" y="2" width="16" height="50" rx="3" fill="#FAC775"/>'
 + '<text x="138" y="29" font-family="Courier New" font-size="7" font-weight="700" fill="#3d1a00" text-anchor="middle" dominant-baseline="central" transform="rotate(90,138,29)">8B</text></g>'
-+ '<g style="cursor:pointer" data-zone="z4b"><rect x="148" y="2" width="130" height="50" rx="4" fill="#E8D5F2"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z4b\')"><rect x="148" y="2" width="130" height="50" rx="4" fill="#E8D5F2"/>'
 + '<text x="213" y="21" font-family="Courier New" font-size="8" font-weight="700" fill="#3a1f5a" text-anchor="middle">Zone 4B</text>'
 + '<text x="213" y="33" font-family="Courier New" font-size="7" fill="#3a1f5a" text-anchor="middle">9G·9H·9I·9J</text>'
 + '<text x="213" y="43" font-family="Courier New" font-size="7" fill="#3a1f5a" text-anchor="middle">9K·9L·9M</text></g>'
 // Horizontal walkway
 + '<rect x="2" y="54" width="276" height="7" fill="url(#wh1-hatch)"/>'
 // Middle row: Zone 2 | 9TF-A / 9TF-B
-+ '<g style="cursor:pointer" data-zone="z2"><rect x="2" y="63" width="146" height="66" rx="4" fill="#9EC8F0"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z2\')"><rect x="2" y="63" width="146" height="66" rx="4" fill="#9EC8F0"/>'
 + '<text x="75" y="86" font-family="Courier New" font-size="9" font-weight="700" fill="#0a2a42" text-anchor="middle">Zone 2</text>'
 + '<text x="75" y="99" font-family="Courier New" font-size="7" fill="#0a2a42" text-anchor="middle">9Q·7E·7F·7G·12A–12F</text></g>'
-+ '<g style="cursor:pointer" data-bin="9TF-A"><rect x="150" y="63" width="128" height="31" rx="4" fill="#EEB8D4"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapPick(\'9TF-A\')"><rect x="150" y="63" width="128" height="31" rx="4" fill="#EEB8D4"/>'
 + '<text x="214" y="79" font-family="Courier New" font-size="8" font-weight="700" fill="#4a0f28" text-anchor="middle">9TF-A</text></g>'
-+ '<g style="cursor:pointer" data-bin="9TF-B"><rect x="150" y="97" width="128" height="32" rx="4" fill="#EEB8D4"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapPick(\'9TF-B\')"><rect x="150" y="97" width="128" height="32" rx="4" fill="#EEB8D4"/>'
 + '<text x="214" y="113" font-family="Courier New" font-size="8" font-weight="700" fill="#4a0f28" text-anchor="middle">9TF-B</text></g>'
 // Bottom-of-middle row: Zone 7 | wk | Zone 8 | spacer | Zone 6
-+ '<g style="cursor:pointer" data-zone="z7"><rect x="2" y="133" width="64" height="56" rx="4" fill="#B8E86B"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z7\')"><rect x="2" y="133" width="64" height="56" rx="4" fill="#B8E86B"/>'
 + '<text x="34" y="156" font-family="Courier New" font-size="8" font-weight="700" fill="#2a4400" text-anchor="middle">Zone 7</text>'
 + '<text x="34" y="168" font-family="Courier New" font-size="7" fill="#2a4400" text-anchor="middle">5A-D·7A-D</text></g>'
 + '<rect x="68" y="133" width="7" height="56" rx="2" fill="url(#wh1-hatch)"/>'
-+ '<g style="cursor:pointer" data-zone="z8"><rect x="77" y="133" width="52" height="56" rx="4" fill="#FFF2A8"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z8\')"><rect x="77" y="133" width="52" height="56" rx="4" fill="#FFF2A8"/>'
 + '<text x="103" y="156" font-family="Courier New" font-size="8" font-weight="700" fill="#4a3f0a" text-anchor="middle">Zone 8</text>'
 + '<text x="103" y="168" font-family="Courier New" font-size="7" fill="#4a3f0a" text-anchor="middle">9N·5E·9O</text></g>'
 + '<rect x="131" y="133" width="17" height="56" fill="#111"/>'
-+ '<g style="cursor:pointer" data-zone="z6"><rect x="150" y="133" width="128" height="56" rx="4" fill="#C49FE0"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z6\')"><rect x="150" y="133" width="128" height="56" rx="4" fill="#C49FE0"/>'
 + '<text x="214" y="156" font-family="Courier New" font-size="8" font-weight="700" fill="#3a0f5a" text-anchor="middle">Zone 6</text>'
 + '<text x="214" y="168" font-family="Courier New" font-size="7" fill="#3a0f5a" text-anchor="middle">6A · 6B · 9P</text></g>'
 // Horizontal walkway
 + '<rect x="2" y="193" width="276" height="7" fill="url(#wh1-hatch)"/>'
 // Bottom row: Zone 1 | Zone 3
-+ '<g style="cursor:pointer" data-zone="z1"><rect x="2" y="203" width="136" height="90" rx="4" fill="#F4A030"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z1\')"><rect x="2" y="203" width="136" height="90" rx="4" fill="#F4A030"/>'
 + '<text x="70" y="240" font-family="Courier New" font-size="10" font-weight="700" fill="#3d1a00" text-anchor="middle">Zone 1</text>'
 + '<text x="70" y="254" font-family="Courier New" font-size="7" fill="#3d1a00" text-anchor="middle">1·4A·4B·4C·10A–10E</text></g>'
-+ '<g style="cursor:pointer" data-zone="z3"><rect x="142" y="203" width="136" height="90" rx="4" fill="#7DC87D"/>'
++ '<g style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z3\')"><rect x="142" y="203" width="136" height="90" rx="4" fill="#7DC87D"/>'
 + '<text x="210" y="240" font-family="Courier New" font-size="10" font-weight="700" fill="#0f2e0f" text-anchor="middle">Zone 3</text>'
 + '<text x="210" y="254" font-family="Courier New" font-size="7" fill="#0f2e0f" text-anchor="middle">3A1·3A2·3B–3G·10F-10H</text></g>'
 // Office / Breakroom strip
@@ -192,40 +192,17 @@ MapInstance.prototype.build = function(){
   }
   this.ov = document.getElementById('wh1map-ov');
 
-  // Wire up zone clicks and direct-bin clicks in SVG
-  // FIX (2026-05-18): iOS Safari often drops `click` on SVG <g>. Fire the action
-  // on touchend explicitly, and skip the synthetic click that follows.
-  var svg = this.root.querySelector('[data-role="svg-wrap"] svg');
-  function bindTappable(el, handler){
-    var tapped = false;
-    el.addEventListener('touchstart', function(){ el.style.opacity='.72'; tapped=false; }, {passive:true});
-    el.addEventListener('touchend', function(ev){
-      el.style.opacity='1';
-      tapped = true;
-      if(ev.cancelable) ev.preventDefault();  // suppress the 300ms synthetic click
-      handler();
-      setTimeout(function(){ tapped=false; }, 350);
-    }, {passive:false});
-    el.addEventListener('touchcancel', function(){ el.style.opacity='1'; tapped=false; }, {passive:true});
-    el.addEventListener('click', function(){
-      if(tapped) return;
-      handler();
-    });
-  }
-  svg.querySelectorAll('g[data-zone]').forEach(function(g){
-    bindTappable(g, function(){ self.openZone(g.getAttribute('data-zone')); });
-  });
-  svg.querySelectorAll('g[data-bin]').forEach(function(g){
-    bindTappable(g, function(){ self.pick(g.getAttribute('data-bin')); });
-  });
-
-  // Wire up side buttons (8A/8C/8D) — these are <button>, click works reliably
-  this.root.querySelectorAll('button[data-bin]').forEach(function(b){
-    b.addEventListener('click', function(){ self.pick(b.getAttribute('data-bin')); });
-  });
+  // Side buttons (8A/8C/8D) — use inline onclick via global proxies
+  this.root.querySelector('.wh1map-side button[data-bin="8A"]').setAttribute('onclick',"window.__wh1mapPick('8A')");
+  var rightBtns = this.root.querySelectorAll('.wh1map-side button[data-bin="8C"],.wh1map-side button[data-bin="8D"]');
+  rightBtns.forEach(function(b){ b.setAttribute('onclick',"window.__wh1mapPick('"+b.getAttribute('data-bin')+"')"); });
 
   // Wire up Confirm button
   this.root.querySelector('[data-role="confirmBtn"]').addEventListener('click', function(){ self.doConfirm(); });
+
+  // Expose global proxies that delegate to THIS instance (last-render wins)
+  window.__wh1mapOpenZone = function(z){ self.openZone(z); };
+  window.__wh1mapPick     = function(b){ self.pick(b); };
 };
 
 // ---- HELPERS FOR BUILDING DRAWER GRIDS ----
