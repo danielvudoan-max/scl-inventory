@@ -169,7 +169,7 @@ MapInstance.prototype.build = function(){
     +   '</div>'
     +   '<div class="wh1map-confirm" data-role="confirm">'
     +     '<span class="wh1map-ctext" data-role="confirmText">—</span>'
-    +     '<button class="wh1map-cbtn" data-role="confirmBtn">Confirm ✓</button>'
+    +     '<button class="wh1map-cbtn" data-role="confirmBtn" onclick="window.__wh1mapConfirm()">Confirm ✓</button>'
     +   '</div>'
     + '</div>';
 
@@ -197,12 +197,10 @@ MapInstance.prototype.build = function(){
   var rightBtns = this.root.querySelectorAll('.wh1map-side button[data-bin="8C"],.wh1map-side button[data-bin="8D"]');
   rightBtns.forEach(function(b){ b.setAttribute('onclick',"window.__wh1mapPick('"+b.getAttribute('data-bin')+"')"); });
 
-  // Wire up Confirm button
-  this.root.querySelector('[data-role="confirmBtn"]').addEventListener('click', function(){ self.doConfirm(); });
-
   // Expose global proxies that delegate to THIS instance (last-render wins)
   window.__wh1mapOpenZone = function(z){ self.openZone(z); };
   window.__wh1mapPick     = function(b){ self.pick(b); };
+  window.__wh1mapConfirm  = function(){  self.doConfirm(); };
 };
 
 // ---- HELPERS FOR BUILDING DRAWER GRIDS ----
