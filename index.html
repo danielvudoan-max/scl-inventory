@@ -534,7 +534,7 @@ function touchSession(){
 // To rotate: paste new hash strings here, redeploy. Active gate flags
 // stay valid for the same browser/user until the 3-day cap; if you want
 // to force everyone to re-auth immediately, also bump GATE_REVISION.
-var COUNTER_PWD_HASH    = '0bdce1d0735a30ba88e7116adeb3afa47c1fa3b61e12719dd10d9d73bf044c44';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 var GATE_REVISION = 1;  // bump to invalidate all existing gate flags
 var GATE_KEY = 'scl_inv_gate';
@@ -1123,7 +1123,14 @@ function startCounting(){
 }
 function cancelWhConfirm(){
   document.getElementById('whConfirm').style.display='none';
-  // workerName/selectedWh already set but harmless — they get overwritten on next attempt
+  // p4.0 — re-show login modal so user can change name/WH. Pre-fill current values.
+  // Safe pre-existing-boot too: if user came from login modal originally, this just re-displays it.
+  var modal = document.getElementById('modal');
+  if(modal) modal.className = '';
+  var nameInput = document.getElementById('ni');
+  if(nameInput && workerName) nameInput.value = workerName;
+  var whSel = document.getElementById('whsel');
+  if(whSel && selectedWh) whSel.value = selectedWh;
 }
 function confirmWh(){
   document.getElementById('whConfirm').style.display='none';
@@ -2480,9 +2487,20 @@ function doCloudSubmit(){
     if(sb) sb.style.display='none';
     setCloudStatus('ok','✓ Saved '+n+' item'+(n===1?'':'s')+' to server.');
     toast('Submitted — count saved to server','s');
-    // Auto-close after a beat so the user sees the confirmation
+    // p4.0 — post-submit reset: wipe bin selection so picker fires again on next cycle,
+    // and re-show WH confirm modal (keeps name+WH pre-filled, allows changing WH if needed).
+    selectedBin='';
+    saveSession();
+    hideBinBar();
+    // Auto-close submit modal after a beat so the user sees the confirmation,
+    // then re-show the WH confirm modal (same as the post-login flow).
     setTimeout(function(){
       document.getElementById('submitModal').className='';
+      // Hide the WH badge in the header (it'll be re-set when confirmWh fires)
+      // Populate and re-show the WH confirm modal so counter taps Confirm → picker
+      document.getElementById('whcLabel').textContent='WH'+selectedWh+' — '+(WH_LABELS[selectedWh]||'');
+      document.getElementById('whcCounter').innerHTML='Counter: <b style="color:var(--txt)">'+workerName+'</b>';
+      document.getElementById('whConfirm').style.display='flex';
     }, 1200);
   }).catch(function(err){
     clearTimeout(to);
