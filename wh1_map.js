@@ -265,19 +265,31 @@ function gridBin(wrap, bin, opts){
   if(opts.gridCol) d.style.gridColumn = opts.gridCol;
   d.textContent = bin;
   d.setAttribute('data-bin', bin);
+  // p4.0 — yellow highlight if this bin is currently selected
   if(_self && _self.sel === bin){
-    d.style.borderColor = '#5DCAA5';
-    d.style.boxShadow = '0 0 0 2px #5DCAA544';
+    d.style.background = '#FFE680';
+    d.style.color = '#3d2a10';
+    d.style.borderColor = '#FFB800';
+    d.style.boxShadow = '0 0 0 3px #FFE68080';
+    d.style.fontWeight = '900';
   }
   d.onclick = function(){
+    // Clear ALL sibling bin highlights in this wrap
     wrap.querySelectorAll('div[data-bin]').forEach(function(x){
+      x.style.background = C[x.getAttribute('data-bin')] || '#eee';
+      x.style.color = '#111';
       x.style.borderColor = 'transparent';
       x.style.boxShadow = '';
+      x.style.fontWeight = '700';
     });
-    d.style.borderColor = '#5DCAA5';
-    d.style.boxShadow = '0 0 0 2px #5DCAA544';
+    // Apply yellow to this one
+    d.style.background = '#FFE680';
+    d.style.color = '#3d2a10';
+    d.style.borderColor = '#FFB800';
+    d.style.boxShadow = '0 0 0 3px #FFE68080';
+    d.style.fontWeight = '900';
     _self.pick(bin);
-    setTimeout(function(){ _self.closeDrawer(); }, 200);
+    // p4.0 — no auto-close: user sees highlight + Confirm bar inside drawer
   };
   return d;
 }
