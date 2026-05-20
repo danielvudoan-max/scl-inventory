@@ -67,10 +67,13 @@ var CSS = ''
 + '.wh1map-dcancel{width:100%;padding:12px;border-radius:8px;border:1px solid #333;background:transparent;font-size:12px;color:#555;cursor:pointer;margin-top:4px}'
 + '.wh1map-tbl{width:100%;border-collapse:separate;border-spacing:3px;margin-bottom:10px;table-layout:fixed}'
 + '.wh1map-tbl td{border-radius:6px;text-align:center;font-size:11px;font-weight:700;cursor:pointer;padding:0;height:40px;vertical-align:middle;color:#111;border:2px solid transparent}'
-+ '.wh1map-tbl td.sel{border-color:#5DCAA5!important;box-shadow:0 0 0 2px #5DCAA544}'
++ '.wh1map-tbl td.sel{background:#FFE680!important;color:#3d2a10!important;border-color:#FFB800!important;box-shadow:0 0 0 3px #FFE68080;font-weight:900}'
 + '.wh1map-tbl td.emp{background:transparent;cursor:default;border:none}'
 + '.wh1map-tbl td.wk{background:'+WK_BG+';cursor:default;border:none}'
 + '.wh1map-tbl td.grey{background:#2a2a2a;cursor:default;border:none}'
+// p4.0 — selected standalone bin highlight (SVG rect + side button)
++ '.wh1map-wrap svg rect.sel-svg{fill:#FFE680!important;stroke:#FFB800;stroke-width:3px}'
++ '.wh1map-sbtn.sel-svg{background:#FFE680!important;color:#3d2a10!important;box-shadow:0 0 0 3px #FFB800}'
 // FIX (2026-05-18) — Ensure SVG <g> hit-test is reliable on iOS Safari when
 // embedded inside a parent app with global * { padding:0 } rules.
 + '.wh1map-wrap svg g[data-zone],.wh1map-wrap svg g[data-bin]{touch-action:manipulation;-webkit-tap-highlight-color:rgba(93,202,165,.25)}'
@@ -99,7 +102,7 @@ var SVG_MARKUP = ''
 + '<text x="97" y="21" font-family="Courier New" font-size="8" font-weight="700" fill="#3a1f5a" text-anchor="middle" pointer-events="none">Zone 4A</text>'
 + '<text x="97" y="33" font-family="Courier New" font-size="7" fill="#3a1f5a" text-anchor="middle" pointer-events="none">9A·9B·9C</text>'
 + '<text x="97" y="43" font-family="Courier New" font-size="7" fill="#3a1f5a" text-anchor="middle" pointer-events="none">9D·9E·9F</text></g>'
-+ '<g><rect x="130" y="2" width="16" height="50" rx="3" fill="#FAC775" style="cursor:pointer" onclick="window.__wh1mapPick(\'8B\')"/>'
++ '<g><rect x="130" y="2" width="16" height="50" rx="3" fill="#FAC775" data-bin="8B" style="cursor:pointer" onclick="window.__wh1mapPick(\'8B\')"/>'
 + '<text x="138" y="29" font-family="Courier New" font-size="7" font-weight="700" fill="#3d1a00" text-anchor="middle" dominant-baseline="central" transform="rotate(90,138,29)" pointer-events="none">8B</text></g>'
 + '<g><rect x="148" y="2" width="130" height="50" rx="4" fill="#E8D5F2" style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z4b\')"/>'
 + '<text x="213" y="21" font-family="Courier New" font-size="8" font-weight="700" fill="#3a1f5a" text-anchor="middle" pointer-events="none">Zone 4B</text>'
@@ -111,9 +114,9 @@ var SVG_MARKUP = ''
 + '<g><rect x="2" y="63" width="146" height="66" rx="4" fill="#9EC8F0" style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z2\')"/>'
 + '<text x="75" y="86" font-family="Courier New" font-size="9" font-weight="700" fill="#0a2a42" text-anchor="middle" pointer-events="none">Zone 2</text>'
 + '<text x="75" y="99" font-family="Courier New" font-size="7" fill="#0a2a42" text-anchor="middle" pointer-events="none">9Q·7E·7F·7G·12A–12F</text></g>'
-+ '<g><rect x="150" y="63" width="128" height="31" rx="4" fill="#EEB8D4" style="cursor:pointer" onclick="window.__wh1mapPick(\'9TF-A\')"/>'
++ '<g><rect x="150" y="63" width="128" height="31" rx="4" fill="#EEB8D4" data-bin="9TF-A" style="cursor:pointer" onclick="window.__wh1mapPick(\'9TF-A\')"/>'
 + '<text x="214" y="79" font-family="Courier New" font-size="8" font-weight="700" fill="#4a0f28" text-anchor="middle" pointer-events="none">9TF-A</text></g>'
-+ '<g><rect x="150" y="97" width="128" height="32" rx="4" fill="#EEB8D4" style="cursor:pointer" onclick="window.__wh1mapPick(\'9TF-B\')"/>'
++ '<g><rect x="150" y="97" width="128" height="32" rx="4" fill="#EEB8D4" data-bin="9TF-B" style="cursor:pointer" onclick="window.__wh1mapPick(\'9TF-B\')"/>'
 + '<text x="214" y="113" font-family="Courier New" font-size="8" font-weight="700" fill="#4a0f28" text-anchor="middle" pointer-events="none">9TF-B</text></g>'
 // Bottom-of-middle row: Zone 7 | wk | Zone 8 | spacer | Zone 6
 + '<g><rect x="2" y="133" width="64" height="56" rx="4" fill="#B8E86B" style="cursor:pointer" onclick="window.__wh1mapOpenZone(\'z7\')"/>'
@@ -184,6 +187,10 @@ MapInstance.prototype.build = function(){
       +   '<div class="wh1map-dtitle" data-role="dtitle">Select bin</div>'
       +   '<div class="wh1map-dsub">Tap the exact bin you are counting in</div>'
       +   '<div data-role="dcontent"></div>'
+      +   '<div class="wh1map-confirm" data-role="dconfirm" style="margin-top:14px">'
+      +     '<span class="wh1map-ctext" data-role="dconfirmText">—</span>'
+      +     '<button class="wh1map-cbtn" data-role="dconfirmBtn" onclick="window.__wh1mapConfirm()">Confirm ✓</button>'
+      +   '</div>'
       +   '<button class="wh1map-dcancel" data-role="dcancel">Cancel</button>'
       + '</div>';
     document.body.appendChild(ov);
@@ -222,7 +229,7 @@ function mkB(bin, rs, cs, opts){
     document.querySelectorAll('[data-role="dcontent"] td').forEach(function(x){ x.classList.remove('sel'); });
     e.classList.add('sel');
     _self.pick(bin);
-    setTimeout(function(){ _self.closeDrawer(); }, 200);
+    // p4.0 — no auto-close: user sees yellow highlight + Confirm bar inside drawer
   };
   return e;
 }
@@ -535,6 +542,9 @@ MapInstance.prototype.openZone = function(zid){
 
 MapInstance.prototype.closeDrawer = function(){
   this.ov.classList.remove('open');
+  // p4.0 — reset drawer confirm bar so it doesn't show stale on next open
+  var dc = this.ov.querySelector('[data-role="dconfirm"]');
+  if(dc) dc.className = 'wh1map-confirm';
   document.body.style.overflow = '';
 };
 
@@ -545,6 +555,17 @@ MapInstance.prototype.pick = function(code){
   b.className   = 'wh1map-badge on';
   this.root.querySelector('[data-role="confirmText"]').textContent = 'Counting in: ' + code;
   this.root.querySelector('[data-role="confirm"]').className = 'wh1map-confirm show';
+  // p4.0 — also populate drawer confirm (visible only when drawer is open)
+  var dt = this.ov && this.ov.querySelector('[data-role="dconfirmText"]');
+  var dc = this.ov && this.ov.querySelector('[data-role="dconfirm"]');
+  if(dt) dt.textContent = 'Counting in: ' + code;
+  if(dc) dc.className = 'wh1map-confirm show';
+  // p4.0 — highlight standalone bins (SVG rects + side buttons) on map
+  // Clear any prior highlights
+  this.root.querySelectorAll('.sel-svg').forEach(function(x){ x.classList.remove('sel-svg'); });
+  // Apply to the matching element (if standalone bin; drawer bins handled by .sel class on td)
+  var standalone = this.root.querySelector('[data-bin="'+code+'"]');
+  if(standalone) standalone.classList.add('sel-svg');
   if(typeof window.SCL_BIN_SELECT === 'function') window.SCL_BIN_SELECT(code);
 };
 
