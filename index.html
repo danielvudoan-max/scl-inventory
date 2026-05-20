@@ -86,7 +86,7 @@ header{background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 14
 .ltit{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
 .lact{display:-webkit-flex;display:flex;gap:6px}
 .bsm{background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:6px 12px;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--txt);cursor:pointer;-webkit-appearance:none;touch-action:manipulation}
-.bexp{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.bexp{background:var(--acc);border-color:var(--acc);color:#000}
 .twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:11px}
 th{background:var(--surf2);color:var(--muted);font-weight:600;text-transform:uppercase;font-size:9px;padding:6px 8px;text-align:left}
@@ -119,7 +119,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 /* OFFLINE BANNER */
 #offbanner{display:none;background:var(--surf2);border:1px solid var(--warn);border-radius:8px;padding:9px 12px;margin:10px 14px 0;font-size:11px;color:var(--warn);text-align:center}
 /* SUBMIT BUTTON */
-.submbtn{width:calc(100% - 28px);margin:12px 14px 0;background:linear-gradient(135deg,var(--acc),#00b894);color:#000;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;font-family:var(--sans);cursor:pointer;display:block;-webkit-appearance:none;touch-action:manipulation;letter-spacing:.04em}
+.submbtn{width:calc(100% - 28px);margin:12px 14px 0;background:var(--acc2);color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;font-family:var(--sans);cursor:pointer;display:block;-webkit-appearance:none;touch-action:manipulation;letter-spacing:.04em}
 .submbtn:active{opacity:.85}
 /* SUBMIT MODAL */
 #submitModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9997;padding:24px;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
@@ -221,8 +221,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <div id="whConfirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9998;align-items:center;justify-content:center;padding:20px;-webkit-align-items:center;-webkit-justify-content:center">
   <div style="background:var(--surf);border:2px solid var(--acc);border-radius:16px;padding:24px;width:100%;max-width:340px;text-align:center">
     <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Confirm warehouse</div>
-    <div id="whcLabel" style="font-size:26px;font-weight:900;color:var(--acc);margin-bottom:6px;line-height:1.15">WH1 — COLLINS</div>
-    <div id="whcCounter" style="font-size:13px;color:var(--muted);margin-bottom:18px">Counter: <b style="color:var(--txt)">—</b></div>
+    <div id="whcLabel" style="font-size:28px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.15">WH1 — COLLINS</div>
+    <div id="whcCounter" style="font-size:15px;color:var(--muted);margin-bottom:18px">Counter: <b style="color:var(--txt)">—</b></div>
     <div style="font-size:12px;color:var(--warn);background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.3);border-radius:8px;padding:10px;margin-bottom:16px;line-height:1.45">⚠ All counts will be submitted to this warehouse. Make sure it&rsquo;s correct.</div>
     <button onclick="confirmWh()" style="width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px;touch-action:manipulation">✓ Confirm &amp; Start</button>
     <button onclick="cancelWhConfirm()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:11px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none">Change selection</button>
@@ -269,11 +269,13 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   </div>
 </div>
 
+<!-- p4.0 — sticky shell wraps header + bin bar + tabs so they freeze together on scroll -->
+<div id="stickyShell" style="position:sticky;top:0;z-index:500;background:var(--bg)">
 <header>
-  <div class="logo">SCL<span id="hsub">Inventory Count</span></div>
+  <div class="logo"><img src="scl_logo.jpg" alt="SCL" style="height:36px;width:auto;display:block;border-radius:4px" onerror="this.style.display='none'"><span id="hsub" style="color:#fff;margin-left:8px">Inventory Count</span></div>
   <div class="hdr-right">
-    <a href="javascript:void(0)" id="switchLink" onclick="openSwitchCounter()" style="display:none;font-size:11px;color:var(--muted);text-decoration:underline;margin-right:4px;cursor:pointer">Switch&nbsp;counter</a>
-    <div id="whBadge" style="display:none;background:var(--acc);color:#000;border-radius:6px;padding:4px 10px;font-weight:900;font-size:13px;letter-spacing:.05em;font-family:var(--sans)">WH—</div>
+    <a href="javascript:void(0)" id="switchLink" onclick="openSwitchCounter()" style="display:none;font-size:11px;color:var(--warn);text-decoration:underline;margin-right:4px;cursor:pointer">Switch&nbsp;counter</a>
+    <div id="whBadge" style="display:none;background:var(--danger);color:#fff;border-radius:6px;padding:4px 10px;font-weight:900;font-size:13px;letter-spacing:.05em;font-family:var(--sans)">WH—</div>
     <div class="pill" id="syncpill" style="display:none"><span class="sdot" id="sdot"></span><span id="slbl">Syncing</span></div>
     <div class="pill">Counted: <b id="cnt">0</b></div>
   </div>
@@ -281,8 +283,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 
 <!-- p4.0 — BIN BAR (WH1 only). Shows active bin + Change button. Sits between header and tabs. -->
 <div id="binBar" style="display:none;background:var(--surf2);border-bottom:1px solid var(--bdr);padding:8px 14px;align-items:center;-webkit-align-items:center;justify-content:space-between;-webkit-justify-content:space-between;gap:10px">
-  <div id="binBarLabel" style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--warn);letter-spacing:.04em;flex:1;-webkit-flex:1">📍 BIN: —</div>
-  <button id="binBarChange" onclick="openBinPicker()" style="background:transparent;color:var(--acc);border:1px solid var(--acc);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation;white-space:nowrap">Change</button>
+  <div id="binBarLabel" style="font-family:var(--mono);font-size:15px;font-weight:900;color:var(--warn);letter-spacing:.04em;flex:1;-webkit-flex:1">📍 BIN: —</div>
+  <button id="binBarChange" onclick="openBinPicker()" style="background:transparent;color:var(--acc);border:1px solid var(--acc);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation;white-space:nowrap">Change bin</button>
 </div>
 
 <div class="tabs" id="tabs">
@@ -290,6 +292,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   <div class="tab" id="tLog" onclick="switchTab('log')">&#128203; My Log</div>
   <div class="tab" id="tSup" onclick="switchTab('sup')" style="display:none">&#128065; Live</div>
 </div>
+</div>
+<!-- end stickyShell -->
 <div id="offbanner"></div>
 
 <!-- p4.0 — BIN PICKER OVERLAY (WH1 only). Full-screen modal containing the WH1 map. -->
@@ -309,7 +313,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   <div class="szn">
     <div class="sinp-wrap">
       <span class="sico">&#9655;</span>
-      <input id="scanInput" type="text" placeholder="Scan or type product code..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" onfocus="armScanDismiss()" oninput="onScanInput()" onkeydown="if(event.keyCode===13){event.preventDefault();doSearch(this.value.trim())}">
+      <input id="scanInput" type="text" placeholder="Type or Speak product (code, description, etc)" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" onfocus="armScanDismiss()" oninput="onScanInput()" onkeydown="if(event.keyCode===13){event.preventDefault();doSearch(this.value.trim())}">
     </div>
     <button class="cambtn" id="cambtn" onclick="toggleCamera()" style="display:none">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -461,7 +465,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0 · 2026-05-18';
+var APP_VERSION='p4.0b · 2026-05-19';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -2591,7 +2595,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v18';",
+    "const CACHE='scl-inv-v19';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
