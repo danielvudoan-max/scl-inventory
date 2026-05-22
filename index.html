@@ -202,7 +202,11 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
     <!-- p4.0 — WH1-with-bin variant shows "Change zone" instead of Switch counter/warehouse -->
     <button id="rcChangeZoneBtn" onclick="resumeChangeZone()" style="display:none;width:100%;background:transparent;color:var(--acc);border:1px solid var(--acc);border-radius:8px;padding:11px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px">Change zone</button>
     <button id="rcSwitchCounterBtn" onclick="resumeSwitchCounter()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:8px;padding:11px;font-size:13px;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;margin-bottom:10px">Switch counter</button>
-    <a id="rcSwitchWhLink" href="javascript:void(0)" onclick="resumeFullReset()" style="display:block;font-size:11px;color:var(--muted);text-decoration:underline;opacity:.7">Switch warehouse instead</a>
+    <a id="rcSwitchWhLink" href="javascript:void(0)" onclick="resumeFullReset()" style="display:block;font-size:11px;color:var(--muted);text-decoration:underline;opacity:.7;margin-bottom:14px">Switch warehouse instead</a>
+    <!-- p4.0c — local device reset: clears all counts saved on THIS device. -->
+    <div id="rcResetWrap" style="border-top:1px solid var(--bdr);padding-top:12px">
+      <a id="rcClearLink" href="javascript:void(0)" onclick="resumeClearDevice()" style="display:block;font-size:12px;color:var(--danger);text-decoration:underline;opacity:.85">🗑 Clear my counts &amp; start fresh</a>
+    </div>
   </div>
 </div>
 
@@ -465,7 +469,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0c · 2026-05-19';
+var APP_VERSION='p4.0d · 2026-05-22';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -1081,7 +1085,7 @@ function loadInventoryForWh(wh){
             BOM: 0,
             ON_HAND: Number(it.on_hand)||0,
             AVAILABLE: Number(it.on_hand)||0,
-            BIN_LOC: String(it.pk_description||'').trim(),
+            BIN_LOC: String(it.bin_loc != null ? it.bin_loc : '').trim(),
             VENDOR: String(it.vendor||''),
             VPROD_CODE: String(it.vpcode||''),
             OPEN_ORDERS: 0
@@ -1423,6 +1427,33 @@ function resumeFullReset(){
   clearSession();
   workerName=''; selectedWh=''; isSup=false;
   // Show the login modal (it's not hidden by default; just need to ensure it's visible)
+  document.getElementById('modal').className='';
+}
+
+// p4.0c — Clear ALL counts saved on THIS device (local only). For starting a fresh
+// count cycle on a personal device that was used for testing. Does NOT touch the
+// password gate (no re-entering password), and does NOT touch the server/other devices.
+function resumeClearDevice(){
+  if(!confirm('This will permanently delete ALL counts saved on this device and start fresh.\n\nThis cannot be undone. Continue?')) return;
+  try {
+    // Remove every entry key (e_*) plus the session marker from localStorage.
+    var toRemove = [];
+    for(var i=0;i<localStorage.length;i++){
+      var lk = localStorage.key(i);
+      if(!lk) continue;
+      // Count entries are stored as PFX + 'e_...'; also clear the session marker.
+      if(lk.indexOf(PFX+'e_')===0) toRemove.push(lk);
+    }
+    toRemove.forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
+    // Clear session + in-memory state
+    clearSession();
+    myLog = {};
+    selectedBin = '';
+    workerName=''; selectedWh=''; isSup=false;
+  } catch(e){}
+  toast('All counts cleared — starting fresh','s');
+  // Return to a clean login screen
+  document.getElementById('resumeCard').style.display='none';
   document.getElementById('modal').className='';
 }
 
@@ -2628,7 +2659,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v20';",
+    "const CACHE='scl-inv-v21';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
