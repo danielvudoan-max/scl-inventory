@@ -1545,7 +1545,37 @@ function doSearch(q, fromTyping){
   if(res.length===1 && !fromTyping){showMatch(res[0]);return;}
   document.getElementById('mc').style.display='none';
   mlEl.style.display='-webkit-flex'; mlEl.style.display='flex';
-  res.forEach(function(r){
+  // p4.0c — stash current results + render with pack filter pills (mirrors AI scan UI)
+  _searchResults = res;
+  renderSearchList('All');
+}
+// p4.0c — render typed-search results with All/Drum/Pail/Case/Bulk filter pills
+var _searchResults = [];
+function renderSearchList(activeFilter){
+  var mlEl=document.getElementById('ml');
+  mlEl.innerHTML='';
+  var res=_searchResults||[];
+  // Only show filter pills when there's more than one result
+  if(res.length>1){
+    var filters=['All','Drum','Pail','Case','Bulk'];
+    var fbar=document.createElement('div');
+    fbar.style.cssText='display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap';
+    filters.forEach(function(f){
+      var btn=document.createElement('button');
+      btn.textContent=f;
+      btn.style.cssText='padding:7px 14px;border-radius:20px;border:1px solid var(--bdr);background:'+(f===activeFilter?'var(--acc2)':'var(--surf2)')+';color:'+(f===activeFilter?'#fff':'var(--txt)')+';font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation';
+      btn.onclick=function(){renderSearchList(f);};
+      fbar.appendChild(btn);
+    });
+    mlEl.appendChild(fbar);
+  }
+  // Apply filter
+  var filtered=res;
+  if(activeFilter!=='All'){
+    filtered=res.filter(function(p){return categorizePak(p.PAK)===activeFilter;});
+    if(!filtered.length) filtered=res; // fallback to all if filter empty
+  }
+  filtered.forEach(function(r){
     var d=document.createElement('div');
     d.className='mi';
     d.innerHTML='<div class="mil">'+r.PRODUCT+'<div class="mip">PAK: '+(r.PAK||'—')+' | BIN: '+r.BIN_LOC+'</div></div><div class="mid">'+r.DESCRIPTION+'</div>';
@@ -1553,7 +1583,6 @@ function doSearch(q, fromTyping){
     mlEl.appendChild(d);
   });
   // p3.8 — always show "+ Add new item" at the bottom of multi-results.
-  // If the user is holding a product none of these match, they can add it as new.
   var addNew=document.createElement('div');
   addNew.style.cssText='padding:12px;margin-top:6px;border-top:1px dashed var(--bdr);text-align:center';
   addNew.innerHTML='<button onclick="document.getElementById(\'ml\').style.display=\'none\';openNewItem()" style="background:transparent;color:var(--acc2);border:1px solid var(--acc2);border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">+ My item isn\u2019t here \u2014 add new</button>';
