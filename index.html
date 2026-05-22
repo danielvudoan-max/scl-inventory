@@ -45,7 +45,7 @@ header{background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 14
 .szn{padding:14px 14px 0}
 .sinp-wrap{position:relative;margin-bottom:10px}
 .sico{position:absolute;left:13px;top:50%;-webkit-transform:translateY(-50%);transform:translateY(-50%);color:var(--acc);font-size:18px;pointer-events:none}
-#scanInput{width:100%;background:var(--surf2);border:2px solid var(--acc);border-radius:10px;padding:13px 13px 13px 42px;font-family:var(--mono);font-size:17px;color:var(--txt);outline:none;-webkit-appearance:none;display:block}
+#scanInput{width:100%;background:var(--surf2);border:2px solid var(--acc);border-radius:10px;padding:13px 13px 13px 42px;font-family:var(--mono);font-size:13px;color:var(--txt);outline:none;-webkit-appearance:none;display:block}
 /* CAM BTN */
 .cambtn{width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:10px;padding:12px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;gap:8px;color:var(--txt);font-family:var(--sans);font-weight:600;font-size:14px;cursor:pointer;margin-bottom:10px;-webkit-appearance:none;touch-action:manipulation}
 /* CAMERA */
@@ -86,7 +86,7 @@ header{background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 14
 .ltit{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
 .lact{display:-webkit-flex;display:flex;gap:6px}
 .bsm{background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:6px 12px;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--txt);cursor:pointer;-webkit-appearance:none;touch-action:manipulation}
-.bexp{background:var(--acc);border-color:var(--acc);color:#000}
+.bexp{background:var(--surf2);border-color:var(--bdr);color:var(--txt)}
 .twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:11px}
 th{background:var(--surf2);color:var(--muted);font-weight:600;text-transform:uppercase;font-size:9px;padding:6px 8px;text-align:left}
@@ -465,7 +465,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0b · 2026-05-19';
+var APP_VERSION='p4.0c · 2026-05-19';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -1522,9 +1522,11 @@ function onScanInput(){
   clearTimeout(scanTimer);
   var v=document.getElementById('scanInput').value.trim();
   if(!v){resetMatch();return;}
-  scanTimer=setTimeout(function(){doSearch(v);},120);
+  // p4.0b — pass fromTyping=true so a single match shows in the LIST (no auto-select,
+  // no cursor jump to count). User taps the row to choose it. Avoids hijacking mid-type.
+  scanTimer=setTimeout(function(){doSearch(v, true);},120);
 }
-function doSearch(q){
+function doSearch(q, fromTyping){
   if(!q)return;
   var res=findProds(q);
   var mlEl=document.getElementById('ml');
@@ -1538,7 +1540,9 @@ function doSearch(q){
     nfm.innerHTML='<div style="margin-bottom:10px">No product found for "'+q.replace(/[<>&]/g,'')+'"</div><button onclick="openNewItem()" style="background:var(--acc2);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none">+ Add new item</button>';
     curItem=null; return;
   }
-  if(res.length===1){showMatch(res[0]);return;}
+  // p4.0b — single match: auto-select ONLY on explicit submit (Enter / barcode scan).
+  // While typing, fall through to the list so the user can keep typing/refine.
+  if(res.length===1 && !fromTyping){showMatch(res[0]);return;}
   document.getElementById('mc').style.display='none';
   mlEl.style.display='-webkit-flex'; mlEl.style.display='flex';
   res.forEach(function(r){
@@ -2595,7 +2599,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v19';",
+    "const CACHE='scl-inv-v20';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
