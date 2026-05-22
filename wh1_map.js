@@ -583,11 +583,21 @@ MapInstance.prototype.pick = function(code){
 
 MapInstance.prototype.doConfirm = function(){
   if(!this.sel) return;
+  // p4.0 — close drawer FIRST (before the picker hides), unconditionally
+  if(this.ov){
+    this.ov.classList.remove('open');
+    var dc = this.ov.querySelector('[data-role="dconfirm"]');
+    if(dc) dc.className = 'wh1map-confirm';
+    document.body.style.overflow = '';
+  }
+  var bar = this.root.querySelector('[data-role="confirm"]');
+  if(bar){
+    bar.style.background = '#5DCAA530';
+    setTimeout(function(){ bar.style.background = ''; }, 500);
+  }
+  // Then fire callbacks (these close the picker overlay in index.html)
   if(typeof window.SCL_BIN_CONFIRM === 'function') window.SCL_BIN_CONFIRM(this.sel);
   if(typeof this.onConfirmCb === 'function')      this.onConfirmCb(this.sel);
-  var bar = this.root.querySelector('[data-role="confirm"]');
-  bar.style.background = '#5DCAA530';
-  setTimeout(function(){ bar.style.background = ''; }, 500);
 };
 
 // ---- PUBLIC API ----
