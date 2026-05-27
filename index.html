@@ -279,6 +279,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   <div class="logo"><img src="scl_logo.jpg" alt="SCL" style="height:36px;width:auto;display:block;border-radius:4px" onerror="this.style.display='none'"><span id="hsub" style="color:#fff;margin-left:8px">Inventory Count</span></div>
   <div class="hdr-right">
     <a href="javascript:void(0)" id="switchLink" onclick="openSwitchCounter()" style="display:none;font-size:11px;color:var(--warn);text-decoration:underline;margin-right:4px;cursor:pointer">Switch&nbsp;counter</a>
+    <a href="javascript:void(0)" id="aboutLink" onclick="openAbout()" title="About" style="font-size:15px;color:var(--muted);margin-right:6px;cursor:pointer;text-decoration:none;line-height:1">&#9432;</a>
     <div id="whBadge" style="display:none;background:var(--danger);color:#fff;border-radius:6px;padding:4px 10px;font-weight:900;font-size:13px;letter-spacing:.05em;font-family:var(--sans)">WH—</div>
     <div class="pill" id="syncpill" style="display:none"><span class="sdot" id="sdot"></span><span id="slbl">Syncing</span></div>
     <div class="pill">Counted: <b id="cnt">0</b></div>
@@ -299,6 +300,20 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 </div>
 <!-- end stickyShell -->
 <div id="offbanner"></div>
+
+<!-- About modal -->
+<div id="aboutModal" onclick="if(event.target===this)closeAbout()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9997;align-items:center;justify-content:center;-webkit-align-items:center;-webkit-justify-content:center;padding:24px">
+  <div style="background:var(--surf);border:1px solid var(--bdr);border-radius:14px;max-width:340px;width:100%;padding:22px 22px 18px;text-align:center">
+    <div style="font-size:17px;font-weight:900;color:var(--acc);letter-spacing:.02em">SCL Inventory Count</div>
+    <div id="aboutVer" style="font-family:var(--mono);font-size:12px;color:var(--txt);margin-top:8px"></div>
+    <div id="aboutBuild" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px"></div>
+    <div style="height:1px;background:var(--bdr);margin:14px 0"></div>
+    <div style="font-size:13px;color:var(--txt)">Created by <b>Daniel Doan</b></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:3px">&#169; 2026 Daniel Doan</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:12px;word-break:break-all">danielvudoan-max.github.io/scl-inventory/</div>
+    <button onclick="closeAbout()" style="margin-top:16px;width:100%;background:var(--surf2);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:13px;font-family:var(--sans);font-weight:600;cursor:pointer;-webkit-appearance:none;touch-action:manipulation">Close</button>
+  </div>
+</div>
 
 <!-- p4.0 — BIN PICKER OVERLAY (WH1 only). Full-screen modal containing the WH1 map. -->
 <div id="binPicker" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9995;overflow-y:auto;-webkit-overflow-scrolling:touch">
@@ -469,7 +484,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0e · 2026-05-26';
+var APP_VERSION='p4.0f · 2026-05-26';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -1258,6 +1273,22 @@ function hideBinBar(){
 // p4.0 — keep content clear of the frozen sticky shell on every screen/state.
 // Measures the shell's actual rendered height and pads the panels below it.
 function syncShellPad(){ /* no-op: sticky shell reserves its own flow space */ }
+function openAbout(){
+  document.getElementById('aboutVer').textContent = 'Version ' + APP_VERSION;
+  var buildName = 'scl-inv';
+  try{
+    if('caches' in window){
+      caches.keys().then(function(keys){
+        var c = keys.filter(function(k){return k.indexOf('scl-inv')===0;}).sort().pop();
+        document.getElementById('aboutBuild').textContent = 'Build: ' + (c || buildName);
+      });
+    } else {
+      document.getElementById('aboutBuild').textContent = 'Build: ' + buildName;
+    }
+  }catch(e){ document.getElementById('aboutBuild').textContent = 'Build: ' + buildName; }
+  document.getElementById('aboutModal').style.display = 'flex';
+}
+function closeAbout(){ document.getElementById('aboutModal').style.display = 'none'; }
 window.addEventListener('resize', syncShellPad);
 window.addEventListener('orientationchange', function(){ setTimeout(syncShellPad, 150); });
 
@@ -2691,7 +2722,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v22';",
+    "const CACHE='scl-inv-v23';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
