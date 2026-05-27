@@ -469,7 +469,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0d · 2026-05-22';
+var APP_VERSION='p4.0e · 2026-05-26';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -542,7 +542,7 @@ function touchSession(){
 // To rotate: paste new hash strings here, redeploy. Active gate flags
 // stay valid for the same browser/user until the 3-day cap; if you want
 // to force everyone to re-auth immediately, also bump GATE_REVISION.
-var COUNTER_PWD_HASH    = 'e1c91259ffaaf58df573caedf173757fa8949ff6efed1d5f68b8e26f321615e5';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 var GATE_REVISION = 1;  // bump to invalidate all existing gate flags
 var GATE_KEY = 'scl_inv_gate';
@@ -620,6 +620,7 @@ function afterGate(){
   if(!resumed){
     // Login modal is the default visible element; nothing to do
   }
+  syncShellPad();
 }
 // ── STORAGE ADAPTER ───────────────────────────────────────────────────
 // Works both inside Claude (window.storage) and as a standalone local file
@@ -1173,6 +1174,7 @@ function confirmWh(){
         showBinBar();
         setTimeout(function(){document.getElementById('scanInput').focus();},300);
       } else {
+        showBinBar();
         setTimeout(function(){document.getElementById('scanInput').focus();},300);
       }
     });
@@ -1222,13 +1224,50 @@ function onBinConfirmed(binCode){
   },200);
 }
 function showBinBar(){
-  if(String(selectedWh)!=='1' || !selectedBin) return;
-  document.getElementById('binBarLabel').textContent = '📍 BIN: '+selectedBin;
-  document.getElementById('binBar').style.display='flex';
+  var label = document.getElementById('binBarLabel');
+  var btn   = document.getElementById('binBarChange');
+  var bar   = document.getElementById('binBar');
+  if(String(selectedWh)==='1' && selectedBin){
+    // Active — WH1 with a chosen bin
+    label.textContent = '📍 BIN: '+selectedBin;
+    label.style.color = 'var(--warn)';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    btn.style.color = 'var(--acc)';
+    btn.style.borderColor = 'var(--acc)';
+    btn.style.cursor = 'pointer';
+  } else {
+    // Placeholder — non-WH1 (no bin map yet): greyed, disabled
+    label.textContent = '📍 No bin tracking — WH'+selectedWh;
+    label.style.color = 'var(--muted)';
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.pointerEvents = 'none';
+    btn.style.color = 'var(--muted)';
+    btn.style.borderColor = 'var(--bdr)';
+    btn.style.cursor = 'default';
+  }
+  bar.style.display = 'flex';
+  syncShellPad();
 }
 function hideBinBar(){
   document.getElementById('binBar').style.display='none';
+  syncShellPad();
 }
+// p4.0 — keep content clear of the frozen sticky shell on every screen/state.
+// Measures the shell's actual rendered height and pads the panels below it.
+function syncShellPad(){
+  requestAnimationFrame(function(){
+    var sh = document.getElementById('stickyShell');
+    if(!sh) return;
+    var h = sh.offsetHeight + 6;
+    var pnls = document.querySelectorAll('.pnl');
+    for(var i=0;i<pnls.length;i++){ pnls[i].style.paddingTop = h + 'px'; }
+  });
+}
+window.addEventListener('resize', syncShellPad);
+window.addEventListener('orientationchange', function(){ setTimeout(syncShellPad, 150); });
 
 // p3.4 — restore myLog from persisted entries for the active (wh, worker).
 // Returns a Promise<number> of entries restored. Also cleans up old-format
@@ -1531,6 +1570,7 @@ function switchTab(t){
   });
   if(t==='log')renderLog();
   if(t==='sup')renderSup();
+  syncShellPad();
 }
 
 // ── SCAN INPUT ────────────────────────────────────────────────────────
@@ -2659,7 +2699,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v21';",
+    "const CACHE='scl-inv-v22';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
