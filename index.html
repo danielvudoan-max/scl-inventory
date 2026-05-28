@@ -485,7 +485,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0O · 2026-05-27';
+var APP_VERSION='p4.0Q · 2026-05-27';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -559,7 +559,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'e1c91259ffaaf58df573caedf173757fa8949ff6efed1d5f68b8e26f321615e5';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -830,6 +830,7 @@ function findByVendorCode(vc){
   // by scanning full VPROD_CODE on each product. This is critical for Honda/Acura where
   // ALL products share "08798" — old 6-char index returned the whole brand.
   // Falls back to the 6-char index for short codes (existing behavior).
+  var matches=[];
   if(clean.length>6 && Array.isArray(PRODUCTS)){
     for(var L=Math.min(clean.length,12); L>=7; L--){
       var pre=clean.substring(0,L);
@@ -839,15 +840,25 @@ function findByVendorCode(vc){
         var vp=(p.VPROD_CODE||'').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
         if(vp && vp.indexOf(pre)===0) hits.push(p);
       }
-      if(hits.length) return hits;
+      if(hits.length){ matches=hits; break; }
     }
   }
   // Existing 6→5→4 indexed lookup as fallback
-  for(var len=Math.min(6,clean.length);len>=4;len--){
-    var prefix=clean.substring(0,len);
-    if(vendorIdx[prefix]) return vendorIdx[prefix];
+  if(!matches.length){
+    for(var len=Math.min(6,clean.length);len>=4;len--){
+      var prefix=clean.substring(0,len);
+      if(vendorIdx[prefix]){ matches=vendorIdx[prefix]; break; }
+    }
   }
-  return [];
+  if(!matches.length) return [];
+  // p4.0P: Expand vcode hits to include ALL pack variants of the matched product codes.
+  // A tote may have a different vcode (or no vcode) from the 55-drum variant; once we've
+  // identified the product CODE via any vcode, surface every pack size of that code so
+  // the counter sees all variants before unrelated products from the loose ranking stages.
+  var productCodes={};
+  matches.forEach(function(p){ productCodes[p.PRODUCT]=true; });
+  var expanded=PRODUCTS.filter(function(p){ return productCodes[p.PRODUCT]; });
+  return expanded;
 }
 function aiSearch(parsed){
   var results=[];
@@ -951,10 +962,28 @@ function aiSearch(parsed){
 
   // 1. Vendor code match — exact vcode read off the label is the STRONGEST signal,
   // so it bypasses the alias gate entirely (a prefix gap must never hide an exact vcode hit).
-  if(parsed.vendor_code) addUnique(findByVendorCode(parsed.vendor_code));
+  // p4.0Q: If vcode identifies a product confidently, RETURN ONLY THAT product's variants.
+  // No scoring, no sibling-pulls, no alias-pool ranking — the label said what it is.
+  if(parsed.vendor_code){
+    var vcodeHits=findByVendorCode(parsed.vendor_code);
+    if(vcodeHits.length){
+      addUnique(vcodeHits);
+      return results;  // ← stop here. The label was read; show the product.
+    }
+  }
 
-  // 2. Full search string from AI
-  if(parsed.search) addUnique(refine(findProds(parsed.search)));
+  // 2. Full search string from AI — exact string match in description is also high-confidence.
+  // If it produces gated results, return those.
+  if(parsed.search){
+    var searchHits=refine(findProds(parsed.search));
+    if(searchHits.length){
+      addUnique(searchHits);
+      return results;  // ← stop here too. We found the named product.
+    }
+  }
+
+  // Below this line: looser fallback stages — only run when vcode and search both failed
+  // to confidently identify the product. These help when the label is hard to read.
 
   // 2.5 (p4.0L) — Scored alias-pool ranking, promoted from stage 7. Runs after the
   // precise stage-2 search so its top-scored match leads the list, instead of being
@@ -2823,7 +2852,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v32';",
+    "const CACHE='scl-inv-v34';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
