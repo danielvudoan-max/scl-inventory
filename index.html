@@ -485,7 +485,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0k · 2026-05-26';
+var APP_VERSION='p4.0L · 2026-05-26';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -559,7 +559,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'e1c91259ffaaf58df573caedf173757fa8949ff6efed1d5f68b8e26f321615e5';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -932,6 +932,29 @@ function aiSearch(parsed){
   // 2. Full search string from AI
   if(parsed.search) addUnique(refine(findProds(parsed.search)));
 
+  // 2.5 (p4.0L) — Scored alias-pool ranking, promoted from stage 7. Runs after the
+  // precise stage-2 search so its top-scored match leads the list, instead of being
+  // appended after looser sibling-pulls from stages 3-6. Uses expandTokens (which
+  // handles abbreviations like TRANSMISSION↔TRANS) so e.g. "HONDA MANUAL TRANS. FLUID"
+  // matches AI-extracted "Manual Transmission Fluid". Stage 7 stays as a final catch.
+  if(alias){
+    var aliasOnlyEarly = gate(PRODUCTS);
+    if(aliasOnlyEarly.length){
+      var gradeTokEarly = parsed.grade
+        ? parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;})
+        : [];
+      var allTokEarly = scoringTokens.concat(gradeTokEarly);
+      if(allTokEarly.length){
+        var scoredEarly = aliasOnlyEarly.map(function(p){
+          return {p:p, score:scoreByTokens(p,allTokEarly)};
+        });
+        scoredEarly.sort(function(a,b){return b.score-a.score;});
+        var topEarly = scoredEarly.filter(function(s){return s.score>=2;}).slice(0,8);
+        addUnique(topEarly.map(function(s){return s.p;}));
+      }
+    }
+  }
+
   // 3. Product line + grade
   if(parsed.product_line&&parsed.grade&&results.length<5)
     addUnique(refine(findProds(parsed.product_line+' '+parsed.grade)));
@@ -1051,8 +1074,8 @@ var BRAND_ALIASES=[
   {match:['MOBIL'],                   prefixes:['MO','MOB'], vendors:['655']},
   // ── Phillips 66 family (vendor 156 — SHARED with OEMs, prefix-only) ──
   // Note: P66 alone uses prefix only because vendor 156 also packs Honda/Acura/Toyota OEM
-  {match:['PHILLIPS 66','P66','PHILLIPS'], prefixes:['P66','PHL'], vendors:[], oem:true},
-  {match:['KENDALL'],                 prefixes:['KEN'],      vendors:[], oem:true},
+  {match:['PHILLIPS 66','P66','PHILLIPS'], prefixes:['P66','PHL','PHIL'], vendors:[], oem:true},
+  {match:['KENDALL'],                 prefixes:['KEN','GT','DGT'],      vendors:[], oem:true},
   {match:['CONOCO'],                  prefixes:['CON'],      vendors:[], oem:true},
   // ── Lucas (vendor 2549 — brand-exclusive) ────────────────────────
   {match:['LUCAS'],                   prefixes:['LUC'],      vendors:['2549']},
@@ -2772,7 +2795,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v28';",
+    "const CACHE='scl-inv-v29';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
