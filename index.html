@@ -485,7 +485,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0M · 2026-05-26';
+var APP_VERSION='p4.0O · 2026-05-27';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -559,7 +559,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'e1c91259ffaaf58df573caedf173757fa8949ff6efed1d5f68b8e26f321615e5';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -878,10 +878,17 @@ function aiSearch(parsed){
   ];
   // Returns expanded token list for a given productLine string.
   // E.g. "Honda Genuine Power Steering Fluid" → ["HONDA","GENUINE","POWER","STEERING","FLUID","PSF"]
+  // Common English short words that aren't product descriptors — excluded from tokens.
+  // Industrial 2-char codes (AW, EP, HD, MV, ST, FG, etc.) are NOT in this list
+  // because they're legitimate product descriptors (e.g. "AW 68", "EP-5", "HD 30").
+  var SHORT_STOP=['AT','TO','IN','ON','OF','IS','BE','OR','BY','AS','AN','IT','NO','SO','UP','DO','GO','THE','AND','FOR','WITH'];
   function expandTokens(text){
     if(!text) return [];
     var up=text.toUpperCase();
-    var tokens=up.split(/[^A-Z0-9]+/).filter(function(w){return w.length>=3;});
+    // p4.0O: dropped from length>=3 to length>=2 so industrial codes like AW (anti-wear),
+    // EP (extreme pressure), HD (heavy duty), MV (multi-vehicle) score. SHORT_STOP excludes
+    // common English short words that aren't product descriptors.
+    var tokens=up.split(/[^A-Z0-9]+/).filter(function(w){return w.length>=2 && SHORT_STOP.indexOf(w)<0;});
     // Add abbreviation matches both directions
     for(var i=0;i<ABBR_MAP.length;i++){
       var entry=ABBR_MAP[i];
@@ -892,7 +899,7 @@ function aiSearch(parsed){
         // Add primary word forms (first 1-2 keywords) for cross-matching
         entry.words.forEach(function(w){
           w.split(/\s+/).forEach(function(part){
-            if(part.length>=3 && tokens.indexOf(part)<0) tokens.push(part);
+            if(part.length>=2 && SHORT_STOP.indexOf(part)<0 && tokens.indexOf(part)<0) tokens.push(part);
           });
         });
       }
@@ -1104,7 +1111,11 @@ var BRAND_ALIASES=[
   {match:['SUBARU'],                  prefixes:['SUB'],      vendors:['156','4555','0'], oem:true},
   {match:['NISSAN'],                  prefixes:['NIS'],      vendors:['156','4555','0'], oem:true},
   {match:['HYUNDAI'],                 prefixes:['HYU'],      vendors:['156','4555','0'], oem:true},
-  {match:['KIA'],                     prefixes:['KIA'],      vendors:['156','4555','0'], oem:true}
+  {match:['KIA'],                     prefixes:['KIA'],      vendors:['156','4555','0'], oem:true},
+  // ── Mercedes-Benz (OEM, prefix-only) ─────────────────────────────
+  {match:['MERCEDES','MERCEDES-BENZ','MB'], prefixes:['MB'],  vendors:['156','4555','0'], oem:true},
+  // ── Olympus (SCL house brand) ────────────────────────────────────
+  {match:['OLYMPUS','OLY'],           prefixes:['OLY'],      vendors:[], oem:true}
 ];
 function findBrandAlias(brand,productLine){
   var hay=((brand||'')+' '+(productLine||'')).toUpperCase();
@@ -2812,7 +2823,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v30';",
+    "const CACHE='scl-inv-v32';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
