@@ -278,7 +278,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <header>
   <div class="logo"><img src="scl_logo.jpg" alt="SCL" style="height:36px;width:auto;display:block;border-radius:4px" onerror="this.style.display='none'"><span id="hsub" style="color:#fff;margin-left:8px">Inventory Count</span></div>
   <div class="hdr-right">
-    <a href="javascript:void(0)" id="switchLink" onclick="openSwitchCounter()" style="display:none;font-size:11px;color:var(--warn);text-decoration:underline;margin-right:4px;cursor:pointer">Switch&nbsp;counter</a>
+    <a href="javascript:void(0)" id="switchLink" onclick="openSwitchCounter()" style="display:none;font-size:11px;color:var(--muted);text-decoration:none;margin-right:4px;cursor:pointer;opacity:.55" title="Temporarily disabled">Switch&nbsp;counter</a>
     <a href="javascript:void(0)" id="aboutLink" onclick="openAbout()" title="About" style="font-size:15px;color:var(--muted);margin-right:6px;cursor:pointer;text-decoration:none;line-height:1">&#9432;</a>
     <div id="whBadge" style="display:none;background:var(--danger);color:#fff;border-radius:6px;padding:4px 10px;font-weight:900;font-size:13px;letter-spacing:.05em;font-family:var(--sans)">WH—</div>
     <div class="pill" id="syncpill" style="display:none"><span class="sdot" id="sdot"></span><span id="slbl">Syncing</span></div>
@@ -332,7 +332,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
   <div class="szn">
     <div class="sinp-wrap">
       <span class="sico">&#9655;</span>
-      <input id="scanInput" type="text" placeholder="Type or Speak product (code, description, etc)" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" onfocus="armScanDismiss()" oninput="onScanInput()" onkeydown="if(event.keyCode===13){event.preventDefault();doSearch(this.value.trim())}">
+      <input id="scanInput" type="text" placeholder="Type or Speak product (code, description, etc)" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" onfocus="armScanDismiss()" oninput="onScanInput()" onkeydown="if(event.keyCode===13){event.preventDefault();doSearch(this.value.trim())}" style="padding-right:42px">
+      <button type="button" id="scanClearBtn" onclick="clearScanInput()" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:var(--surf2);color:var(--muted);border:1px solid var(--bdr);font-size:16px;font-weight:700;line-height:1;padding:0;cursor:pointer;-webkit-appearance:none;touch-action:manipulation" aria-label="Clear">&times;</button>
     </div>
     <button class="cambtn" id="cambtn" onclick="toggleCamera()" style="display:none">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -484,7 +485,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0f · 2026-05-26';
+var APP_VERSION='p4.0h · 2026-05-26';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -554,12 +555,22 @@ function touchSession(){
 // ── PASSWORD GATE (p3.7) ──────────────────────────────────────────────
 // Hardcoded SHA-256 hashes of the counter and supervisor passwords.
 // Generate new hashes via the standalone hash_gen.html tool.
-// To rotate: paste new hash strings here, redeploy. Active gate flags
-// stay valid for the same browser/user until the 3-day cap; if you want
-// to force everyone to re-auth immediately, also bump GATE_REVISION.
+// To rotate: paste new hash strings here, redeploy (bump SW cache).
+// GATE_REVISION now auto-derives from the hashes, so all existing
+// gate tokens invalidate automatically on any hash change — every user
+// re-enters the new password. No manual revision bump required.
 var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
-var GATE_REVISION = 1;  // bump to invalidate all existing gate flags
+// p4.0h — GATE_REVISION auto-derives from the active password hashes.
+// Rotating either hash automatically invalidates all existing gate tokens,
+// forcing every user to re-enter the new password. No manual bump needed.
+function _deriveGateRev(){
+  var s = String(COUNTER_PWD_HASH) + '|' + String(SUPERVISOR_PWD_HASH);
+  var h = 0;
+  for(var i=0;i<s.length;i++){ h = ((h<<5)-h + s.charCodeAt(i))|0; }
+  return 'r'+(h>>>0).toString(36);
+}
+var GATE_REVISION = _deriveGateRev();  // changes whenever a password hash changes
 var GATE_KEY = 'scl_inv_gate';
 var GATE_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;  // 3 days, matches session
 
@@ -713,6 +724,18 @@ buildIndex();
 //   - Ends in P (and not BK/BKP) → Pail
 //   - Everything else → Case
 // 1EA, 1G etc. fall to Case naturally.
+// p4.0g — push 1EA / blank-PAK products to the bottom of result lists.
+// Real PAKs (drums/pails/cases/bulk) surface first regardless of original sort.
+function deprioritize1EA(arr){
+  var primary=[], secondary=[];
+  arr.forEach(function(p){
+    var pk=String(p.PAK||'').toUpperCase().trim();
+    if(!pk || pk==='1EA' || pk==='EA') secondary.push(p);
+    else primary.push(p);
+  });
+  return primary.concat(secondary);
+}
+
 function categorizePak(pak){
   if(!pak) return 'Case';
   var p=String(pak).toUpperCase().trim();
@@ -1231,6 +1254,12 @@ function onBinConfirmed(binCode){
   saveSession();
   document.getElementById('binPicker').style.display='none';
   showBinBar();
+  // p4.0g — bin change clears any in-progress typed search (matches scan UX).
+  _searchResults = [];
+  var mlEl = document.getElementById('ml'); if(mlEl){ mlEl.innerHTML=''; mlEl.style.display='none'; }
+  var mcEl = document.getElementById('mc'); if(mcEl){ mcEl.style.display='none'; }
+  var siEl = document.getElementById('scanInput'); if(siEl){ siEl.value=''; }
+  var xBtn = document.getElementById('scanClearBtn'); if(xBtn){ xBtn.style.display='none'; }
   toast('Bin set: '+selectedBin,'s');
   // Focus scan input if we're on the count tab
   setTimeout(function(){
@@ -1527,10 +1556,15 @@ function openSwitchCounter(){
     fullLogout();
     return;
   }
+  // p4.0g — intentionally disabled for counter mode (parked: needs submit-or-discard prompt).
+  toast('Switch counter is intentionally disabled','w');
+  return;
+  /* PARKED — re-enable by removing the toast/return above + adding submit-or-discard prompt:
   document.getElementById('scWhLabel').textContent = 'WH'+selectedWh+' — '+(WH_LABELS[selectedWh]||'');
   document.getElementById('scName').value = '';
   document.getElementById('switchCounterModal').style.display='flex';
   setTimeout(function(){ document.getElementById('scName').focus(); }, 100);
+  */
 }
 function cancelSwitchCounter(){
   document.getElementById('switchCounterModal').style.display='none';
@@ -1612,9 +1646,22 @@ function armScanDismiss(){
   if(res && res.style.display==='block'){ res.style.display='none'; }
 }
 function dismissAiPanelIfArmed(){ /* legacy no-op kept for any stale callers */ }
+function clearScanInput(){
+  var si=document.getElementById('scanInput');
+  if(si){ si.value=''; }
+  var xBtn=document.getElementById('scanClearBtn');
+  if(xBtn){ xBtn.style.display='none'; }
+  _searchResults = [];
+  var mlEl=document.getElementById('ml'); if(mlEl){ mlEl.innerHTML=''; mlEl.style.display='none'; }
+  var mcEl=document.getElementById('mc'); if(mcEl){ mcEl.style.display='none'; }
+  if(si) si.focus();
+}
 function onScanInput(){
   clearTimeout(scanTimer);
-  var v=document.getElementById('scanInput').value.trim();
+  var v=document.getElementById('scanInput').value;
+  var xBtn=document.getElementById('scanClearBtn');
+  if(xBtn){ xBtn.style.display = v.length ? 'block' : 'none'; }
+  v=v.trim();
   if(!v){resetMatch();return;}
   // p4.0b — pass fromTyping=true so a single match shows in the LIST (no auto-select,
   // no cursor jump to count). User taps the row to choose it. Avoids hijacking mid-type.
@@ -1669,6 +1716,7 @@ function renderSearchList(activeFilter){
     filtered=res.filter(function(p){return categorizePak(p.PAK)===activeFilter;});
     if(!filtered.length) filtered=res; // fallback to all if filter empty
   }
+  filtered = deprioritize1EA(filtered);
   filtered.forEach(function(r){
     var d=document.createElement('div');
     d.className='mi';
@@ -2451,6 +2499,7 @@ function renderAiMatches(matches,activeFilter){
     filtered=matches.filter(function(p){return categorizePak(p.PAK)===activeFilter;});
     if(!filtered.length) filtered=matches; // fallback to all if filter empty
   }
+  filtered = deprioritize1EA(filtered);
   // Limit to 20 (was 15 — bump per Daniel; may go to 25 if needed)
   filtered.slice(0,20).forEach(function(p){
     var btn=document.createElement('button');
@@ -2722,7 +2771,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v23';",
+    "const CACHE='scl-inv-v25';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
