@@ -485,7 +485,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0i · 2026-05-26';
+var APP_VERSION='p4.0k · 2026-05-26';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -559,7 +559,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'e1c91259ffaaf58df573caedf173757fa8949ff6efed1d5f68b8e26f321615e5';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -925,8 +925,9 @@ function aiSearch(parsed){
     return productLineFilter(gate(arr));
   }
 
-  // 1. Vendor code match (gated through alias if any)
-  if(parsed.vendor_code) addUnique(refine(findByVendorCode(parsed.vendor_code)));
+  // 1. Vendor code match — exact vcode read off the label is the STRONGEST signal,
+  // so it bypasses the alias gate entirely (a prefix gap must never hide an exact vcode hit).
+  if(parsed.vendor_code) addUnique(findByVendorCode(parsed.vendor_code));
 
   // 2. Full search string from AI
   if(parsed.search) addUnique(refine(findProds(parsed.search)));
@@ -1003,20 +1004,6 @@ function aiSearch(parsed){
   // Means we found brand-correct products but couldn't confirm the specific line/grade.
   // UI shows soft banner "No exact match for X — showing other [Brand] products".
   var isWeakMatch = !!alias && !isFallback && results.length>0 && maxScore<2;
-
-  // p4.0i — CRITICAL FIX: results were returned in stage-insertion order, not score order,
-  // so high-scoring correct products (e.g. exact grade match) could appear below weak ones
-  // or get hidden by the PAK filter. Re-sort the actual returned results by token score desc
-  // (stable — equal scores keep insertion order) so the best match always leads.
-  if(scoringTokens.length && results.length>1){
-    var scoreTok=scoringTokens.concat(parsed.grade?parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;}):[]);
-    var withIdx=results.map(function(p,i){return {p:p,i:i,s:scoreByTokens(p,scoreTok)};});
-    withIdx.sort(function(a,b){ return (b.s-a.s) || (a.i-b.i); });
-    var sorted=withIdx.map(function(x){return x.p;});
-    // preserve the ._debug we attach below by rebuilding the array in place
-    results.length=0;
-    for(var si=0;si<sorted.length;si++){ results.push(sorted[si]); }
-  }
 
   // Tag results with debug info + flags
   results._debug={
@@ -2785,7 +2772,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v26';",
+    "const CACHE='scl-inv-v28';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
