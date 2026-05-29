@@ -559,7 +559,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'e1c91259ffaaf58df573caedf173757fa8949ff6efed1d5f68b8e26f321615e5';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -2457,6 +2457,12 @@ function setAddNewBtn(state){
 }
 function togglePhotoScan(){
   if(photoStream){closePhotoScan();return;}
+  // Clear any typed search text when switching to AI scan (no focus — camera is opening)
+  var _si=document.getElementById('scanInput'); if(_si){ _si.value=''; }
+  var _xb=document.getElementById('scanClearBtn'); if(_xb){ _xb.style.display='none'; }
+  _searchResults=[];
+  var _ml=document.getElementById('ml'); if(_ml){ _ml.innerHTML=''; _ml.style.display='none'; }
+  var _mc=document.getElementById('mc'); if(_mc){ _mc.style.display='none'; }
   var btn=document.getElementById('aibtn');
   btn.style.opacity='.6';
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
