@@ -141,8 +141,8 @@ var SVG_MARKUP = ''
 + '<text x="210" y="254" font-family="Courier New" font-size="7" fill="#0f2e0f" text-anchor="middle" pointer-events="none">3A1·3A2·3B–3G·10F-10H</text></g>'
 // Office / Breakroom strip
 + '<rect x="2" y="297" width="276" height="14" rx="3" fill="#222"/>'
-+ '<text x="140" y="304" font-family="Courier New" font-size="6.5" fill="#555" text-anchor="middle" dominant-baseline="central">Office · Breakroom · Restrooms</text>'
-+ '<text x="275" y="320" font-family="Courier New" font-size="8" fill="#444" text-anchor="end">N ▲</text>'
++ '<text x="140" y="304" font-family="Courier New" font-size="6.5" fill="#ffffff" text-anchor="middle" dominant-baseline="central">Office · Breakroom · Restrooms</text>'
++ '<text x="275" y="320" font-family="Courier New" font-size="8" font-weight="700" fill="#FF4D4D" text-anchor="end">N ▲</text>'
 + '</svg>';
 
 // ---- STATE (per-instance) ----
@@ -163,11 +163,15 @@ MapInstance.prototype.build = function(){
     +     '<span class="wh1map-badge" data-role="badge">No bin selected</span>'
     +   '</div>'
     +   '<div class="wh1map-outer">'
-    +     '<div class="wh1map-side"><button class="wh1map-sbtn half" data-bin="8A">8A</button></div>'
+    +     '<div class="wh1map-side">'
+    +       '<button class="wh1map-sbtn half" data-bin="8A">8A</button>'
+    +       '<button class="wh1map-sbtn" data-bin="Stages" style="height:78px;margin-top:auto;margin-bottom:60px;background:#3FA7A0;color:#fff">Stages</button>'
+    +     '</div>'
     +     '<div class="wh1map-wrap" data-role="svg-wrap">' + SVG_MARKUP + '</div>'
     +     '<div class="wh1map-side">'
     +       '<button class="wh1map-sbtn" data-bin="8C" style="height:78px">8C</button>'
     +       '<button class="wh1map-sbtn" data-bin="8D" style="height:78px">8D</button>'
+    +       '<button class="wh1map-sbtn" data-bin="Anaheim" style="height:78px;margin-top:auto;margin-bottom:60px;background:#5B9BD5;color:#fff">Anaheim</button>'
     +     '</div>'
     +   '</div>'
     +   '<div class="wh1map-confirm" data-role="confirm">'
@@ -201,7 +205,7 @@ MapInstance.prototype.build = function(){
 
   // Side buttons (8A/8C/8D) — use inline onclick via global proxies
   this.root.querySelector('.wh1map-side button[data-bin="8A"]').setAttribute('onclick',"window.__wh1mapPick('8A')");
-  var rightBtns = this.root.querySelectorAll('.wh1map-side button[data-bin="8C"],.wh1map-side button[data-bin="8D"]');
+  var rightBtns = this.root.querySelectorAll('.wh1map-side button[data-bin="8C"],.wh1map-side button[data-bin="8D"],.wh1map-side button[data-bin="Anaheim"],.wh1map-side button[data-bin="Stages"]');
   rightBtns.forEach(function(b){ b.setAttribute('onclick',"window.__wh1mapPick('"+b.getAttribute('data-bin')+"')"); });
 
   // Expose global proxies that delegate to THIS instance (last-render wins)
@@ -431,19 +435,32 @@ var BUILDERS = {
       b.style.cursor         = 'pointer';
       b.style.border         = '2px solid transparent';
       b.textContent          = bin;
+      b.setAttribute('data-bin', bin);
+      // p4.0 — yellow highlight if this bin is currently selected
       if(_self && _self.sel === bin){
-        b.style.borderColor = '#5DCAA5';
-        b.style.boxShadow   = '0 0 0 2px #5DCAA544';
+        b.style.background  = '#FFE680';
+        b.style.color       = '#3d2a10';
+        b.style.borderColor = '#FFB800';
+        b.style.boxShadow   = '0 0 0 3px #FFE68080';
+        b.style.fontWeight  = '900';
       }
       b.onclick = function(){
-        wrap.querySelectorAll('div').forEach(function(x){
+        // Clear ALL sibling bin highlights in this wrap
+        wrap.querySelectorAll('div[data-bin]').forEach(function(x){
+          x.style.background  = C[x.getAttribute('data-bin')] || '#eee';
+          x.style.color       = '#111';
           x.style.borderColor = 'transparent';
           x.style.boxShadow   = '';
+          x.style.fontWeight  = '700';
         });
-        b.style.borderColor = '#5DCAA5';
-        b.style.boxShadow   = '0 0 0 2px #5DCAA544';
+        // Apply yellow to this one
+        b.style.background  = '#FFE680';
+        b.style.color       = '#3d2a10';
+        b.style.borderColor = '#FFB800';
+        b.style.boxShadow   = '0 0 0 3px #FFE68080';
+        b.style.fontWeight  = '900';
         _self.pick(bin);
-        setTimeout(function(){ _self.closeDrawer(); }, 200);
+        // p4.0 — no auto-close: user sees yellow highlight + Confirm bar inside drawer
       };
       wrap.appendChild(b);
     });
