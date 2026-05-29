@@ -485,7 +485,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0Q · 2026-05-27';
+var APP_VERSION='p4.0S · 2026-05-27';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -559,7 +559,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'e1c91259ffaaf58df573caedf173757fa8949ff6efed1d5f68b8e26f321615e5';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -896,10 +896,14 @@ function aiSearch(parsed){
   function expandTokens(text){
     if(!text) return [];
     var up=text.toUpperCase();
-    // p4.0O: dropped from length>=3 to length>=2 so industrial codes like AW (anti-wear),
-    // EP (extreme pressure), HD (heavy duty), MV (multi-vehicle) score. SHORT_STOP excludes
-    // common English short words that aren't product descriptors.
-    var tokens=up.split(/[^A-Z0-9]+/).filter(function(w){return w.length>=2 && SHORT_STOP.indexOf(w)<0;});
+    // p4.0S: keep single-digit tokens (they're product identifiers like "VACTRA OIL NO. 4",
+    // "MEGAPLEX #2", "GL-5"). Letters still need 2+ chars. SHORT_STOP excludes English fillers.
+    var tokens=up.split(/[^A-Z0-9]+/).filter(function(w){
+      if(SHORT_STOP.indexOf(w)>=0) return false;
+      // Keep single digits; require >=2 chars for letter-only or mixed tokens
+      if(w.length>=2) return true;
+      return /^[0-9]$/.test(w);
+    });
     // Add abbreviation matches both directions
     for(var i=0;i<ABBR_MAP.length;i++){
       var entry=ABBR_MAP[i];
@@ -1046,9 +1050,18 @@ function aiSearch(parsed){
   // search ALL of inventory by description-text only and return top alternatives.
   // Per "99.9% of items exist" rule — never return empty if any product matches the description.
   // These are flagged as alternatives so the UI can label them clearly.
+  // p4.0R: ALSO runs when the gated stages produced only weak matches (max score < 2).
+  // This catches the case where a brand's products live under multiple code prefixes and
+  // the alias list is incomplete (e.g. Phillips Megaplex products use MEGA prefix, not P66).
+  // Strong description-text matches are prepended ahead of the weak gated results.
   var isFallback=false;
-  if(results.length===0 && scoringTokens.length>0){
-    isFallback=true;
+  var preFallbackMaxScore=0;
+  if(scoringTokens.length && results.length>0){
+    var probeTok=scoringTokens.concat(parsed.grade?parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;}):[]);
+    preFallbackMaxScore=Math.max.apply(null, results.map(function(p){return scoreByTokens(p,probeTok);}));
+  }
+  var weakGated = !!alias && results.length>0 && preFallbackMaxScore<2 && scoringTokens.length>0;
+  if((results.length===0 || weakGated) && scoringTokens.length>0){
     var gradeTokens2=parsed.grade?
       parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;})
       :[];
@@ -1057,8 +1070,24 @@ function aiSearch(parsed){
       return {p:p, score:scoreByTokens(p,fallbackTokens)};
     });
     altScored.sort(function(a,b){return b.score-a.score;});
-    var topAlts=altScored.filter(function(s){return s.score>=1;}).slice(0,20);
-    addUnique(topAlts.map(function(s){return s.p;}));
+    // Stronger threshold for prepend (>=2) than for replace-empty (>=1). When we already
+    // have weak gated results, we want to surface only genuinely better alternatives.
+    var minScore = weakGated ? 2 : 1;
+    var topAlts=altScored.filter(function(s){return s.score>=minScore;}).slice(0,20);
+    if(topAlts.length){
+      if(weakGated){
+        // Prepend stronger matches ahead of the existing weak ones (in place)
+        var existing={};
+        results.forEach(function(p){ existing[p.PRODUCT+'|'+p.PAK]=true; });
+        var prepend=topAlts.map(function(s){return s.p;}).filter(function(p){return !existing[p.PRODUCT+'|'+p.PAK];});
+        // Splice prepend items to the start of results, preserving the array reference
+        for(var pi=prepend.length-1;pi>=0;pi--) results.unshift(prepend[pi]);
+        isFallback=true;
+      } else {
+        addUnique(topAlts.map(function(s){return s.p;}));
+        isFallback=true;
+      }
+    }
   }
 
   // Compute top-5 scored items (across either stage 7 alias pool or stage 8 fallback) for debug
@@ -2852,7 +2881,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v34';",
+    "const CACHE='scl-inv-v36';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
