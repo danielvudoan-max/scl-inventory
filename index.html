@@ -485,7 +485,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p4.0S · 2026-05-27';
+var APP_VERSION='p5.0 · 2026-05-29';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -559,7 +559,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'ac17a4e9f88273d1a455b4daf4c999ead21af14f26ceec8bd01699538a9a6015';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -988,29 +988,14 @@ function aiSearch(parsed){
 
   // Below this line: looser fallback stages — only run when vcode and search both failed
   // to confidently identify the product. These help when the label is hard to read.
-
-  // 2.5 (p4.0L) — Scored alias-pool ranking, promoted from stage 7. Runs after the
-  // precise stage-2 search so its top-scored match leads the list, instead of being
-  // appended after looser sibling-pulls from stages 3-6. Uses expandTokens (which
-  // handles abbreviations like TRANSMISSION↔TRANS) so e.g. "HONDA MANUAL TRANS. FLUID"
-  // matches AI-extracted "Manual Transmission Fluid". Stage 7 stays as a final catch.
-  if(alias){
-    var aliasOnlyEarly = gate(PRODUCTS);
-    if(aliasOnlyEarly.length){
-      var gradeTokEarly = parsed.grade
-        ? parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;})
-        : [];
-      var allTokEarly = scoringTokens.concat(gradeTokEarly);
-      if(allTokEarly.length){
-        var scoredEarly = aliasOnlyEarly.map(function(p){
-          return {p:p, score:scoreByTokens(p,allTokEarly)};
-        });
-        scoredEarly.sort(function(a,b){return b.score-a.score;});
-        var topEarly = scoredEarly.filter(function(s){return s.score>=2;}).slice(0,8);
-        addUnique(topEarly.map(function(s){return s.p;}));
-      }
-    }
-  }
+  //
+  // p5.0 — Stage 2.5 (the early whole-brand scored reranker, added p4.0L) was REMOVED here.
+  // It reordered every fall-through scan by raw token-overlap across the entire brand pool,
+  // pushing broad statistical matches ahead of the targeted line+grade lookups (stages 3-6)
+  // that made precise scans land first. Its only unique job — abbreviation bridging
+  // (TRANSMISSION<->TRANS via expandTokens) — is already covered by stage 7, which runs the
+  // identical scored ranking as a FINAL catch instead of leading. Net: precise-first restored,
+  // abbreviation capability retained.
 
   // 3. Product line + grade
   if(parsed.product_line&&parsed.grade&&results.length<5)
@@ -1050,18 +1035,14 @@ function aiSearch(parsed){
   // search ALL of inventory by description-text only and return top alternatives.
   // Per "99.9% of items exist" rule — never return empty if any product matches the description.
   // These are flagged as alternatives so the UI can label them clearly.
-  // p4.0R: ALSO runs when the gated stages produced only weak matches (max score < 2).
-  // This catches the case where a brand's products live under multiple code prefixes and
-  // the alias list is incomplete (e.g. Phillips Megaplex products use MEGA prefix, not P66).
-  // Strong description-text matches are prepended ahead of the weak gated results.
+  //
+  // p5.0 — R's weak-gated prepend (p4.0R) was REMOVED. It unshifted description matches to the
+  // very front whenever gated results scored low (<2), a SECOND reranker competing with stage 2.5
+  // to decide the first row. Restored to 3.0 behavior: this fallback runs ONLY when results are
+  // empty, and never reorders results that the precise stages already produced.
   var isFallback=false;
-  var preFallbackMaxScore=0;
-  if(scoringTokens.length && results.length>0){
-    var probeTok=scoringTokens.concat(parsed.grade?parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;}):[]);
-    preFallbackMaxScore=Math.max.apply(null, results.map(function(p){return scoreByTokens(p,probeTok);}));
-  }
-  var weakGated = !!alias && results.length>0 && preFallbackMaxScore<2 && scoringTokens.length>0;
-  if((results.length===0 || weakGated) && scoringTokens.length>0){
+  if(results.length===0 && scoringTokens.length>0){
+    isFallback=true;
     var gradeTokens2=parsed.grade?
       parsed.grade.toUpperCase().replace(/[^A-Z0-9]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;})
       :[];
@@ -1070,24 +1051,8 @@ function aiSearch(parsed){
       return {p:p, score:scoreByTokens(p,fallbackTokens)};
     });
     altScored.sort(function(a,b){return b.score-a.score;});
-    // Stronger threshold for prepend (>=2) than for replace-empty (>=1). When we already
-    // have weak gated results, we want to surface only genuinely better alternatives.
-    var minScore = weakGated ? 2 : 1;
-    var topAlts=altScored.filter(function(s){return s.score>=minScore;}).slice(0,20);
-    if(topAlts.length){
-      if(weakGated){
-        // Prepend stronger matches ahead of the existing weak ones (in place)
-        var existing={};
-        results.forEach(function(p){ existing[p.PRODUCT+'|'+p.PAK]=true; });
-        var prepend=topAlts.map(function(s){return s.p;}).filter(function(p){return !existing[p.PRODUCT+'|'+p.PAK];});
-        // Splice prepend items to the start of results, preserving the array reference
-        for(var pi=prepend.length-1;pi>=0;pi--) results.unshift(prepend[pi]);
-        isFallback=true;
-      } else {
-        addUnique(topAlts.map(function(s){return s.p;}));
-        isFallback=true;
-      }
-    }
+    var topAlts=altScored.filter(function(s){return s.score>=1;}).slice(0,20);
+    addUnique(topAlts.map(function(s){return s.p;}));
   }
 
   // Compute top-5 scored items (across either stage 7 alias pool or stage 8 fallback) for debug
@@ -2887,7 +2852,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v36';",
+    "const CACHE='scl-inv-v37';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
