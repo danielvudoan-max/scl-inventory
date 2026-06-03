@@ -485,7 +485,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p5.0 · 2026-05-29';
+var APP_VERSION='p5.1 · 2026-05-29';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -559,7 +559,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'c8d4ab3aa35b34ed3d62f3f3f1a922475425b0fba6c6c0e0b6e46df5545b230f';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -809,9 +809,10 @@ function findProds(q){
   // (e.g. "delo 400 15w40" — multi-word, with grade variants).
   var qn=normalizeGrade(q);
   var qw=expandGrades(qn);
-  var words=q.split(' ').filter(function(w){return w.length>=2;});
-  var wordsN=qn.split(' ').filter(function(w){return w.length>=2;});
-  var wordsW=qw.split(' ').filter(function(w){return w.length>=2;});
+  var keepTok=function(w){return w.length>=2 || /^[0-9]$/.test(w);};
+  var words=q.split(' ').filter(keepTok);
+  var wordsN=qn.split(' ').filter(keepTok);
+  var wordsW=qw.split(' ').filter(keepTok);
   var fallback=PRODUCTS.filter(function(p){
     var d=p.DESCRIPTION.toUpperCase();
     var dn=normalizeGrade(d);
@@ -824,40 +825,40 @@ function findProds(q){
 }
 function findByVendorCode(vc){
   if(!vc) return [];
-  var clean=vc.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
-  if(clean.length<4) return [];
-  // p4.0L fix: when the vcode is longer than 6 chars, first try exact + longer prefixes
-  // by scanning full VPROD_CODE on each product. This is critical for Honda/Acura where
-  // ALL products share "08798" — old 6-char index returned the whole brand.
-  // Falls back to the 6-char index for short codes (existing behavior).
+  var raw=vc.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+  if(raw.length<4) return [];
+  // p5.1 — try literal code, then a numeric-core fallback (strip a leading letter prefix
+  // like the "P" in "P238011-642") so a label prefix can't hide a real part-number match.
+  var tries=[raw];
+  var numCore=raw.replace(/^[A-Z]+/,'');
+  if(numCore!==raw && numCore.length>=4) tries.push(numCore);
   var matches=[];
-  if(clean.length>6 && Array.isArray(PRODUCTS)){
-    for(var L=Math.min(clean.length,12); L>=7; L--){
-      var pre=clean.substring(0,L);
-      var hits=[];
-      for(var i=0;i<PRODUCTS.length;i++){
-        var p=PRODUCTS[i];
-        var vp=(p.VPROD_CODE||'').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
-        if(vp && vp.indexOf(pre)===0) hits.push(p);
+  for(var t=0;t<tries.length && !matches.length;t++){
+    var clean=tries[t];
+    if(clean.length>6 && Array.isArray(PRODUCTS)){
+      for(var L=Math.min(clean.length,12); L>=7; L--){
+        var pre=clean.substring(0,L); var hits=[];
+        for(var i=0;i<PRODUCTS.length;i++){
+          var p=PRODUCTS[i];
+          var vp=(p.VPROD_CODE||'').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+          if(vp && vp.indexOf(pre)===0) hits.push(p);
+        }
+        if(hits.length){ matches=hits; break; }
       }
-      if(hits.length){ matches=hits; break; }
     }
-  }
-  // Existing 6→5→4 indexed lookup as fallback
-  if(!matches.length){
-    for(var len=Math.min(6,clean.length);len>=4;len--){
-      var prefix=clean.substring(0,len);
-      if(vendorIdx[prefix]){ matches=vendorIdx[prefix]; break; }
+    if(!matches.length){
+      for(var len=Math.min(6,clean.length);len>=4;len--){
+        var prefix=clean.substring(0,len);
+        if(vendorIdx[prefix]){ matches=vendorIdx[prefix]; break; }
+      }
     }
   }
   if(!matches.length) return [];
-  // p4.0P: Expand vcode hits to include ALL pack variants of the matched product codes.
-  // A tote may have a different vcode (or no vcode) from the 55-drum variant; once we've
-  // identified the product CODE via any vcode, surface every pack size of that code so
-  // the counter sees all variants before unrelated products from the loose ranking stages.
   var productCodes={};
   matches.forEach(function(p){ productCodes[p.PRODUCT]=true; });
+  var oh={}; PRODUCTS.forEach(function(p){oh[p.PRODUCT]=(oh[p.PRODUCT]||0)+(Number(p.ON_HAND)||0);});
   var expanded=PRODUCTS.filter(function(p){ return productCodes[p.PRODUCT]; });
+  expanded.sort(function(a,b){return (oh[b.PRODUCT]||0)-(oh[a.PRODUCT]||0);});
   return expanded;
 }
 function aiSearch(parsed){
@@ -885,6 +886,7 @@ function aiSearch(parsed){
     {abbr:'CF',  words:['COOLANT','ANTIFREEZE','50/50']},
     {abbr:'BF',  words:['BRAKE FLUID','DOT3','DOT4','DOT 3','DOT 4']},
     {abbr:'GR',  words:['GREASE']},
+    {abbr:'SB',  words:['SYNBLEND','SYN BLEND','SYNTHETIC BLEND']},
     {abbr:'DEF', words:['DEF','DIESEL EXHAUST FLUID']}
   ];
   // Returns expanded token list for a given productLine string.
@@ -895,7 +897,7 @@ function aiSearch(parsed){
   var SHORT_STOP=['AT','TO','IN','ON','OF','IS','BE','OR','BY','AS','AN','IT','NO','SO','UP','DO','GO','THE','AND','FOR','WITH'];
   function expandTokens(text){
     if(!text) return [];
-    var up=text.toUpperCase();
+    var up=text.replace(/([a-z])([A-Z])/g,'$1 $2').toUpperCase();
     // p4.0S: keep single-digit tokens (they're product identifiers like "VACTRA OIL NO. 4",
     // "MEGAPLEX #2", "GL-5"). Letters still need 2+ chars. SHORT_STOP excludes English fillers.
     var tokens=up.split(/[^A-Z0-9]+/).filter(function(w){
@@ -928,7 +930,7 @@ function aiSearch(parsed){
     return tokens.filter(function(t){return d.indexOf(t)>=0;}).length;
   }
 
-  var lineTokens=expandTokens(productLine);
+  var lineTokens=expandTokens(parsed.product_line||productLine);
   // Generic words that nearly every description contains — exclude from scoring noise
   var STOP=['HONDA','TOYOTA','ACURA','SUBARU','GENUINE','FLUID','OIL','SYNTHETIC','FULL','CONVENTIONAL'];
   var scoringTokens=lineTokens.filter(function(t){return STOP.indexOf(t)<0;});
@@ -1053,6 +1055,28 @@ function aiSearch(parsed){
     altScored.sort(function(a,b){return b.score-a.score;});
     var topAlts=altScored.filter(function(s){return s.score>=1;}).slice(0,20);
     addUnique(topAlts.map(function(s){return s.p;}));
+  }
+
+  // p5.1 — Scoring-authoritative ranking for branded scans. Tokens are now reliable
+  // (camelCase split, single digits kept, abbreviations mapped), so the scored alias pool
+  // is the most trustworthy signal. Pull in any strong scorer the stages missed, then sort
+  // all results by (token score desc, on-hand desc) so the best, in-stock match leads.
+  if(alias){
+    var gradeJunk=/not applicable|n\/?a|none|not specified|grease product|not clearly|applicable/i.test(parsed.grade||'');
+    var rankTok=scoringTokens.concat((parsed.grade&&!gradeJunk)?expandTokens(parsed.grade):[]);
+    if(rankTok.length){
+      var pool=gate(PRODUCTS);
+      var poolScored=pool.map(function(p){return {p:p,score:scoreByTokens(p,rankTok)};})
+                         .filter(function(s){return s.score>=2;})
+                         .sort(function(a,b){return b.score-a.score;}).slice(0,20);
+      addUnique(poolScored.map(function(s){return s.p;}));
+      var ohByCode={}; PRODUCTS.forEach(function(p){ ohByCode[p.PRODUCT]=(ohByCode[p.PRODUCT]||0)+(Number(p.ON_HAND)||0); });
+      results.sort(function(a,b){
+        var sa=scoreByTokens(a,rankTok), sb=scoreByTokens(b,rankTok);
+        if(sb!==sa) return sb-sa;
+        return (ohByCode[b.PRODUCT]||0)-(ohByCode[a.PRODUCT]||0);
+      });
+    }
   }
 
   // Compute top-5 scored items (across either stage 7 alias pool or stage 8 fallback) for debug
@@ -2852,7 +2876,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v37';",
+    "const CACHE='scl-inv-v38';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
