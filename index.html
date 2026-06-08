@@ -255,9 +255,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
     <input id="niDesc" type="text" placeholder="e.g. MOBIL SHC 630" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="60" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--txt);outline:none;margin-bottom:12px;box-sizing:border-box">
 
     <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Pack <span style="color:var(--danger)">*</span></label>
-    <select id="niPak" onchange="onNiPakChange()" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:15px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22 fill=%22none%22 stroke=%22%2300d4aa%22 stroke-width=%222%22><path d=%22M1 1l4 4 4-4%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;box-sizing:border-box">
-      <option value="">— Choose pack —</option>
-    </select>
+    <select id="niStyle" onchange="onNiStyleChange()" style="width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:15px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22 fill=%22none%22 stroke=%22%2300d4aa%22 stroke-width=%222%22><path d=%22M1 1l4 4 4-4%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;box-sizing:border-box"><option value="">— Pack style —</option><option value="Drum">Drum</option><option value="Pail">Pail</option><option value="Case">Case</option><option value="Bulk">Bulk</option><option value="__OTHER__">Other (custom)…</option></select>
+    <select id="niPak" onchange="onNiPakChange()" style="display:none;width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;font-size:15px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22 fill=%22none%22 stroke=%22%2300d4aa%22 stroke-width=%222%22><path d=%22M1 1l4 4 4-4%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;box-sizing:border-box"><option value="">— Choose pack —</option></select>
     <input id="niPakOther" type="text" placeholder="Custom pack (e.g. 8X1G)" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="10" style="display:none;width:100%;background:var(--surf2);border:1px solid var(--acc2);border-radius:6px;padding:10px 12px;font-size:15px;font-family:var(--mono);color:var(--txt);outline:none;margin-bottom:12px;letter-spacing:.04em;box-sizing:border-box">
 
     <label style="display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700">Count <span style="color:var(--danger)">*</span></label>
@@ -485,7 +484,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p5.1 · 2026-05-29';
+var APP_VERSION='p5.2 · 2026-06-03';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -559,7 +558,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'c8d4ab3aa35b34ed3d62f3f3f1a922475425b0fba6c6c0e0b6e46df5545b230f';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -1932,49 +1931,28 @@ function saveCount(){ _doSaveCount('replace'); }
 // ── ADD NEW ITEM ──────────────────────────────────────────────────────
 // Used when product isn't in inventory. Saves a count entry flagged new_product:true
 // so supervisor knows to add it to PDS after submission.
+var _niPaksByCat={};
 function openNewItem(){
   // Populate PAK dropdown from current inventory's distinct PAKs, sorted
   var sel=document.getElementById('niPak');
-  // Reset
-  sel.innerHTML='<option value="">— Choose pack —</option>';
-  document.getElementById('niPakOther').style.display='none';
-  document.getElementById('niPakOther').value='';
-  // Distinct PAKs from currently-loaded inventory
+  // p5.2 — two-step pack picker: choose style first, then a scoped code list.
+  // Build per-category map of distinct inventory PAKs (reusing categorizePak).
+  _niPaksByCat={Drum:[],Pail:[],Case:[],Bulk:[]};
   var paks={};
   PRODUCTS.forEach(function(p){var pk=String(p.PAK||'').trim();if(pk)paks[pk]=true;});
-  var sorted=Object.keys(paks).sort(function(a,b){
-    // Group by category, then alpha within group
-    var ca=categorizePak(a), cb=categorizePak(b);
-    var order={'Bulk':0,'Drum':1,'Pail':2,'Case':3};
-    if(ca!==cb) return (order[ca]||9)-(order[cb]||9);
-    return a.localeCompare(b);
-  });
-  // Add grouped optgroups for visual clarity
-  var lastCat='';
-  sorted.forEach(function(pk){
+  Object.keys(paks).forEach(function(pk){
     var cat=categorizePak(pk);
-    if(cat!==lastCat){
-      var og=document.createElement('optgroup');
-      og.label=cat;
-      og.id='niPakOg_'+cat;
-      sel.appendChild(og);
-      lastCat=cat;
-    }
-    var og=document.getElementById('niPakOg_'+cat);
-    var opt=document.createElement('option');
-    opt.value=pk; opt.textContent=pk;
-    og.appendChild(opt);
+    if(!_niPaksByCat[cat]) _niPaksByCat[cat]=[];
+    _niPaksByCat[cat].push(pk);
   });
-  // Cleanup temp ids
-  ['Bulk','Drum','Pail','Case'].forEach(function(c){
-    var og=document.getElementById('niPakOg_'+c);
-    if(og) og.removeAttribute('id');
-  });
-  // Other option at the very end
-  var otherOpt=document.createElement('option');
-  otherOpt.value='__OTHER__';
-  otherOpt.textContent='Other (custom)…';
-  sel.appendChild(otherOpt);
+  Object.keys(_niPaksByCat).forEach(function(c){ _niPaksByCat[c].sort(function(a,b){return a.localeCompare(b);}); });
+  // Reset both selects + custom input
+  document.getElementById('niStyle').value='';
+  document.getElementById('niStyle').style.boxShadow='';
+  sel.innerHTML='<option value="">— Choose pack —</option>';
+  sel.style.display='none';
+  document.getElementById('niPakOther').style.display='none';
+  document.getElementById('niPakOther').value='';
 
   // Reset all fields first
   document.getElementById('niProdCode').value='';
@@ -2015,21 +1993,13 @@ function openNewItem(){
   // If AI prefilled, lightly highlight the pak dropdown to draw attention
   // (counter has to pick one — AI cannot reliably read pack size from labels)
   if(aiPrefilled){
-    sel.style.boxShadow='0 0 0 2px rgba(0,212,170,.45)';
-    sel.style.transition='box-shadow .25s ease';
-    // Focus the pak dropdown — counter's next required action
-    setTimeout(function(){sel.focus();},150);
-    // Fade highlight after 6s if untouched
-    setTimeout(function(){
-      if(!sel.value) sel.style.boxShadow='0 0 0 1px rgba(0,212,170,.25)';
-    },6000);
-    // Listener: clear highlight on first interaction
-    var clearHighlight=function(){
-      sel.style.boxShadow='';
-      sel.removeEventListener('change',clearHighlight);
-      sel.removeEventListener('focus',clearHighlight);
-    };
-    sel.addEventListener('change',clearHighlight);
+    var hl=document.getElementById('niStyle');
+    hl.style.boxShadow='0 0 0 2px rgba(0,212,170,.45)';
+    hl.style.transition='box-shadow .25s ease';
+    setTimeout(function(){hl.focus();},150);
+    setTimeout(function(){ if(!hl.value) hl.style.boxShadow='0 0 0 1px rgba(0,212,170,.25)'; },6000);
+    var clearHighlight=function(){ hl.style.boxShadow=''; hl.removeEventListener('change',clearHighlight); hl.removeEventListener('focus',clearHighlight); };
+    hl.addEventListener('change',clearHighlight);
   } else {
     // No prefill — focus product code as the natural starting field
     setTimeout(function(){document.getElementById('niProdCode').focus();},100);
@@ -2042,6 +2012,25 @@ function onNiPakChange(){
   var v=document.getElementById('niPak').value;
   document.getElementById('niPakOther').style.display=(v==='__OTHER__')?'block':'none';
   if(v==='__OTHER__') setTimeout(function(){document.getElementById('niPakOther').focus();},50);
+}
+function onNiStyleChange(){
+  var style=document.getElementById('niStyle').value;
+  var sel=document.getElementById('niPak');
+  var other=document.getElementById('niPakOther');
+  sel.value=''; sel.style.boxShadow='';
+  if(!style){ sel.style.display='none'; other.style.display='none'; return; }
+  if(style==='__OTHER__'){
+    sel.innerHTML='<option value="__OTHER__" selected>Other (custom)…</option>';
+    sel.value='__OTHER__'; sel.style.display='none';
+    other.style.display='block';
+    setTimeout(function(){other.focus();},50);
+    return;
+  }
+  var codes=(_niPaksByCat[style]||[]);
+  sel.innerHTML='<option value="">— Choose pack —</option>';
+  codes.forEach(function(pk){ var o=document.createElement('option'); o.value=pk; o.textContent=pk; sel.appendChild(o); });
+  var oo=document.createElement('option'); oo.value='__OTHER__'; oo.textContent='Other (custom)…'; sel.appendChild(oo);
+  sel.style.display='block'; other.style.display='none';
 }
 function cancelNewItem(){
   document.getElementById('newItemModal').style.display='none';
@@ -2876,7 +2865,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v38';",
+    "const CACHE='scl-inv-v39';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
