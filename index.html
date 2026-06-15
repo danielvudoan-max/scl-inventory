@@ -558,7 +558,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -835,17 +835,19 @@ function findByVendorCode(vc){
   for(var t=0;t<tries.length && !matches.length;t++){
     var clean=tries[t];
     if(clean.length>6 && Array.isArray(PRODUCTS)){
-      for(var L=Math.min(clean.length,12); L>=7; L--){
-        var pre=clean.substring(0,L); var hits=[];
-        for(var i=0;i<PRODUCTS.length;i++){
-          var p=PRODUCTS[i];
-          var vp=(p.VPROD_CODE||'').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
-          if(vp && vp.indexOf(pre)===0) hits.push(p);
-        }
-        if(hits.length){ matches=hits; break; }
+      // p6.0 — full containment only: exact, or one code is a COMPLETE prefix of the
+      // other (pack/suffix digits). A partial shared head no longer matches, so family
+      // collisions (550049483 vs 550049474 FormulaShell) stop resolving and fall through
+      // to line/grade scoring. Numeric-core fallback (238011 ⊂ 238011642) still works.
+      var hits=[];
+      for(var i=0;i<PRODUCTS.length;i++){
+        var p=PRODUCTS[i];
+        var vp=(p.VPROD_CODE||'').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+        if(vp.length>=6 && (vp.indexOf(clean)===0 || clean.indexOf(vp)===0)) hits.push(p);
       }
-    }
-    if(!matches.length){
+      if(hits.length) matches=hits;
+    } else if(clean.length>=4){
+      // Short code (4-6 chars): the 6-char vendor-prefix index is the only signal.
       for(var len=Math.min(6,clean.length);len>=4;len--){
         var prefix=clean.substring(0,len);
         if(vendorIdx[prefix]){ matches=vendorIdx[prefix]; break; }
@@ -886,7 +888,11 @@ function aiSearch(parsed){
     {abbr:'BF',  words:['BRAKE FLUID','DOT3','DOT4','DOT 3','DOT 4']},
     {abbr:'GR',  words:['GREASE']},
     {abbr:'SB',  words:['SYNBLEND','SYN BLEND','SYNTHETIC BLEND']},
-    {abbr:'DEF', words:['DEF','DIESEL EXHAUST FLUID']}
+    {abbr:'DEF', words:['DEF','DIESEL EXHAUST FLUID']},
+    // p6.0 — abbreviation long tail (8.3): EX/HVY (Mobil DTE EX HVY), MOBILMET→MOBIL MET
+    {abbr:'HVY', words:['HEAVY','HVY']},
+    {abbr:'EX',  words:['EXTRA','EX']},
+    {abbr:'MET', words:['MOBILMET','MOBIL MET','MET']}
   ];
   // Returns expanded token list for a given productLine string.
   // E.g. "Honda Genuine Power Steering Fluid" → ["HONDA","GENUINE","POWER","STEERING","FLUID","PSF"]
@@ -953,12 +959,16 @@ function aiSearch(parsed){
     if(!alias) return arr;
     var prefixes=alias.prefixes||[];
     var vendors=(alias.oem ? [] : (alias.vendors||[]));  // OEMs ignore vendor list
+    var descPrefixes=alias.descPrefixes||[];  // p6.0 — gate on description prefix too (brands whose
+                                              // prodcodes aren't brand-prefixed, e.g. P66 UNFIRE46, OLYMPUS OMEGA50)
     return arr.filter(function(p){
       var pc=(p.PRODUCT||'').toUpperCase();
       var v=String(p.VENDOR||'');
+      var d=(p.DESCRIPTION||'').toUpperCase().replace(/^[^A-Z0-9]+/,'');  // strip leading PDS quote/padding
       var prefixHit=prefixes.length>0 && prefixes.some(function(pre){return pc.indexOf(pre)===0;});
       var vendorHit=vendors.length>0 && vendors.indexOf(v)>=0;
-      return prefixHit || vendorHit;
+      var descHit=descPrefixes.length>0 && descPrefixes.some(function(dp){return d.indexOf(dp)===0;});
+      return prefixHit || vendorHit || descHit;
     });
   }
   function refine(arr){
@@ -1144,7 +1154,7 @@ var BRAND_ALIASES=[
   {match:['MOBIL'],                   prefixes:['MO','MOB'], vendors:['655']},
   // ── Phillips 66 family (vendor 156 — SHARED with OEMs, prefix-only) ──
   // Note: P66 alone uses prefix only because vendor 156 also packs Honda/Acura/Toyota OEM
-  {match:['PHILLIPS 66','P66','PHILLIPS'], prefixes:['P66','PHL','PHIL'], vendors:[], oem:true},
+  {match:['PHILLIPS 66','P66','PHILLIPS'], prefixes:['P66','PHL','PHIL'], vendors:[], oem:true, descPrefixes:['P66','76 ','PHILLIPS']},
   {match:['KENDALL'],                 prefixes:['KEN','GT','DGT'],      vendors:[], oem:true},
   {match:['CONOCO'],                  prefixes:['CON'],      vendors:[], oem:true},
   // ── Lucas (vendor 2549 — brand-exclusive) ────────────────────────
@@ -1164,7 +1174,7 @@ var BRAND_ALIASES=[
   // ── Mercedes-Benz (OEM, prefix-only) ─────────────────────────────
   {match:['MERCEDES','MERCEDES-BENZ','MB'], prefixes:['MB'],  vendors:['156','4555','0'], oem:true},
   // ── Olympus (SCL house brand) ────────────────────────────────────
-  {match:['OLYMPUS','OLY'],           prefixes:['OLY'],      vendors:[], oem:true}
+  {match:['OLYMPUS','OLY'],           prefixes:['OLY'],      vendors:[], oem:true, descPrefixes:['OLYMPUS']}
 ];
 function findBrandAlias(brand,productLine){
   var hay=((brand||'')+' '+(productLine||'')).toUpperCase();
