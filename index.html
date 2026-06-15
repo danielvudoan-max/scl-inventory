@@ -558,7 +558,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+var COUNTER_PWD_HASH    = 'REPLACE_WITH_COUNTER_HASH';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -1149,6 +1149,9 @@ var BRAND_ALIASES=[
   {match:['CONOCO'],                  prefixes:['CON'],      vendors:[], oem:true},
   // ── Lucas (vendor 2549 — brand-exclusive) ────────────────────────
   {match:['LUCAS'],                   prefixes:['LUC'],      vendors:['2549']},
+  // ── Valvoline / Sinclair (p6.0 — independent brands; vendors scattered → prefix-only) ──
+  {match:['VALVOLINE'],               prefixes:['VAL','NVAL'], vendors:[], oem:true},
+  {match:['SINCLAIR'],                prefixes:['SIN'],      vendors:[], oem:true},
   // ── OEM private-label brands (shared vendors 156, 4555, 0 — PREFIX ONLY) ──
   // oem:true → gate uses prefix only, never vendor (would pull other OEMs)
   {match:['ACURA'],                   prefixes:['ACU'],      vendors:['156','4555','0'], oem:true},
