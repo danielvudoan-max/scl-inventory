@@ -484,7 +484,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p6.0a · 2026-06-18';
+var APP_VERSION='p6.0b · 2026-06-18';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -558,7 +558,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = '61ce51051b199487a6a193252c41063a489c646e166c286440d7f2c6ecda323b';
+var COUNTER_PWD_HASH    = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -2137,12 +2137,12 @@ function tapToAdd(k){
   showMatch(e.item);
 }
 function renderMiniLog(){
-  var ents=Object.keys(myLog).map(function(k){return myLog[k];});
-  document.getElementById('eLog').style.display=ents.length?'none':'block';
+  var keys=Object.keys(myLog);
+  document.getElementById('eLog').style.display=keys.length?'none':'block';
   var t=document.getElementById('miniLog');
-  t.style.display=ents.length?'table':'none';
-  document.getElementById('mlBody').innerHTML=ents.slice().reverse().slice(0,6).map(function(e){
-    var k=e.item.PRODUCT+'|'+e.item.PAK, ks=escAttr(k);
+  t.style.display=keys.length?'table':'none';
+  document.getElementById('mlBody').innerHTML=keys.slice().reverse().slice(0,6).map(function(k){
+    var e=myLog[k], ks=escAttr(k);   // p6.0b — use the REAL myLog key so × delete / tap-to-add work for new items
     var adds=e.additions||[];
     var countDisp=e.count;
     if(adds.length>1) countDisp=e.count+'<span style="color:var(--muted);font-size:9px;margin-left:3px">&times;'+adds.length+'</span>';
@@ -2151,13 +2151,14 @@ function renderMiniLog(){
   }).join('');
 }
 function renderLog(){
-  var ents=Object.keys(myLog).map(function(k){return myLog[k];});
-  document.getElementById('eLogFull').style.display=ents.length?'none':'block';
+  var keys=Object.keys(myLog);
+  document.getElementById('eLogFull').style.display=keys.length?'none':'block';
   var t=document.getElementById('logTable');
-  t.style.display=ents.length?'table':'none';
-  document.getElementById('ltBody').innerHTML=ents.slice().reverse().map(function(e){
+  t.style.display=keys.length?'table':'none';
+  document.getElementById('ltBody').innerHTML=keys.slice().reverse().map(function(k){
+    var e=myLog[k];
     var d=e.count-e.item.ON_HAND, dc=d>0?'dp':d<0?'dn':'dz', ds=d>0?'+'+d:d===0?'—':d;
-    var k=e.item.PRODUCT+'|'+e.item.PAK, ks=escAttr(k);
+    var ks=escAttr(k);   // p6.0b — real myLog key (fixes × delete / tap-to-add for new items)
     var newBadge=e.item.NEW_PRODUCT?'<span style="background:var(--acc2);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;margin-left:5px;letter-spacing:.05em">NEW</span>':'';
     // Multi-add breakdown — show "total (a+b+c)" only when there are 2+ additions
     var adds=e.additions||[];
@@ -2879,7 +2880,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v41';",
+    "const CACHE='scl-inv-v42';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
