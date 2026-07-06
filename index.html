@@ -78,9 +78,9 @@ header{background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 14
 /* MULTI */
 #ml{display:none;-webkit-flex-direction:column;flex-direction:column;gap:5px;margin-bottom:10px}
 .mi{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:9px 12px;cursor:pointer;display:-webkit-flex;display:flex;-webkit-justify-content:space-between;justify-content:space-between;-webkit-align-items:center;align-items:center;touch-action:manipulation}
-.mil{font-family:var(--mono);font-size:12px}
-.mip{color:var(--warn);font-size:10px;margin-top:2px}
-.mid{font-size:11px;color:var(--muted);max-width:60%;text-align:right}
+.mil{font-family:var(--mono);font-size:14px}
+.mip{color:var(--warn);font-size:13px;margin-top:2px}
+.mid{font-size:14px;color:var(--muted);max-width:60%;text-align:right}
 /* LOG */
 .lhdr{display:-webkit-flex;display:flex;-webkit-justify-content:space-between;justify-content:space-between;-webkit-align-items:center;align-items:center;padding:12px 14px 6px;border-top:1px solid var(--bdr)}
 .ltit{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
@@ -146,8 +146,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 .air-match{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;text-align:left;width:100%;font-family:var(--sans)}
 .air-match:active{border-color:var(--acc2)}
 .air-prod{font-family:var(--mono);font-size:16px;color:var(--acc);font-weight:700;letter-spacing:.02em}
-.air-pak{font-size:12px;color:var(--warn);margin-top:3px;font-family:var(--mono)}
-.air-desc{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}
+.air-pak{font-size:14px;color:var(--warn);margin-top:3px;font-family:var(--mono)}
+.air-desc{font-size:15px;color:var(--muted);margin-top:4px;line-height:1.4}
 .air-conf{font-size:10px;color:var(--acc2);margin-top:4px;font-family:var(--mono)}
 .air-reasoning{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:10px;line-height:1.4;padding:8px;background:var(--bg);border-radius:6px}
 .air-none{font-size:12px;color:var(--muted);text-align:center;padding:8px}
@@ -484,7 +484,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh1_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p6.0b · 2026-06-18';
+var APP_VERSION='p6.0c · 2026-06-25';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -558,7 +558,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = 'cae7d57bc067a514b8e34c9589631a95c7dc051638ddd2a190773269279a99df';
+var COUNTER_PWD_HASH    = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -2141,7 +2141,7 @@ function renderMiniLog(){
   document.getElementById('eLog').style.display=keys.length?'none':'block';
   var t=document.getElementById('miniLog');
   t.style.display=keys.length?'table':'none';
-  document.getElementById('mlBody').innerHTML=keys.slice().reverse().slice(0,6).map(function(k){
+  document.getElementById('mlBody').innerHTML=keys.slice().reverse().slice(0,10).map(function(k){
     var e=myLog[k], ks=escAttr(k);   // p6.0b — use the REAL myLog key so × delete / tap-to-add work for new items
     var adds=e.additions||[];
     var countDisp=e.count;
@@ -2880,7 +2880,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v42';",
+    "const CACHE='scl-inv-v43';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
