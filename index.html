@@ -148,6 +148,14 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 .air-prod{font-family:var(--mono);font-size:16px;color:var(--acc);font-weight:700;letter-spacing:.02em}
 .air-pak{font-size:14px;color:var(--warn);margin-top:3px;font-family:var(--mono)}
 .air-desc{font-size:15px;color:var(--muted);margin-top:4px;line-height:1.4}
+/* p6.1a — in-stock highlight: green accent when ON_HAND>0 so counters pick the code that actually has stock */
+.air-match--stock{border-left:4px solid var(--acc);background:rgba(0,212,170,.06)}
+.air-match--stock .air-desc{color:var(--acc)}
+.mi--stock{border-left:4px solid var(--acc);background:rgba(0,212,170,.06)}
+.mi--stock .mid{color:var(--acc)}
+.air-oh{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:13px;font-weight:700;padding:2px 9px;border-radius:12px}
+.air-oh.yes{background:rgba(0,212,170,.16);color:var(--acc)}
+.air-oh.no{background:var(--surf2);color:var(--muted);font-weight:600}
 .air-conf{font-size:10px;color:var(--acc2);margin-top:4px;font-family:var(--mono)}
 .air-reasoning{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:10px;line-height:1.4;padding:8px;background:var(--bg);border-radius:6px}
 .air-none{font-size:12px;color:var(--muted);text-align:center;padding:8px}
@@ -482,9 +490,11 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- p4.0 — WH1 Bin Map module. Loaded as separate file; exposes window.WH1Map.render() -->
 <script src="wh1_map.js"></script>
+<!-- p6.1a — WH2 Richmond Bin Map module; exposes window.WH2Map.render() -->
+<script src="wh2_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p6.0c · 2026-06-25';
+var APP_VERSION='p6.1a · 2026-09-02';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -558,7 +568,7 @@ function touchSession(){
 // GATE_REVISION now auto-derives from the hashes, so all existing
 // gate tokens invalidate automatically on any hash change — every user
 // re-enters the new password. No manual revision bump required.
-var COUNTER_PWD_HASH    = '50ff5e2600717641efca9cb592a649af6ee7ae6dd95c324ca64503bd9d216ce7';
+var COUNTER_PWD_HASH    = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 var SUPERVISOR_PWD_HASH = 'REPLACE_WITH_SUPERVISOR_HASH';
 // p4.0h — GATE_REVISION auto-derives from the active password hashes.
 // Rotating either hash automatically invalidates all existing gate tokens,
@@ -1268,6 +1278,10 @@ var _binPickerMode=''; // 'init' (first-time after confirmWh) or 'change' (mid-s
 
 // ── MODAL ─────────────────────────────────────────────────────────────
 var WH_LABELS={'1':'COLLINS','2':'RICHMOND','4':'LANCASTER','7':'SAN JOSE','9':'WATSONVILLE','11':'VISTA'};
+// p6.1a — Bin-map registry. Warehouses with a tappable bin map. Add '11':'WH11Map','4':'WH4Map' as those maps ship.
+var BIN_MAPS={'1':'WH1Map','2':'WH2Map'};
+function mapForWh(wh){ var g=BIN_MAPS[String(wh)]; return (g&&window[g]&&window[g].render)?window[g]:null; }
+function whHasBinMap(wh){ return !!mapForWh(wh); }
 function startCounting(){
   var n=(document.getElementById('ni').value||'').trim();
   if(!n){toast('Enter your name first','w');return;}
@@ -1317,10 +1331,10 @@ function confirmWh(){
         // Make sure the submit button is visible since we have entries
         document.getElementById('submitBtn').style.display='block';
       }
-      // p4.0 — WH1 only: force bin picker before counting begins (unless resume already has one)
-      if(String(wh)==='1' && !selectedBin){
+      // p4.0 — warehouses with a bin map: force bin picker before counting begins (unless resume already has one)
+      if(whHasBinMap(wh) && !selectedBin){
         openBinPicker('init');
-      } else if(String(wh)==='1' && selectedBin){
+      } else if(whHasBinMap(wh) && selectedBin){
         showBinBar();
         setTimeout(function(){document.getElementById('scanInput').focus();},300);
       } else {
@@ -1347,12 +1361,13 @@ function openBinPicker(mode){
   // Clear any prior render and reinit the map
   hostEl.innerHTML = '';
   pickerEl.style.display = 'block';
-  if(typeof window.WH1Map === 'undefined' || !window.WH1Map.render){
+  var mapMod = mapForWh(selectedWh);
+  if(!mapMod){
     toast('Map module not loaded','e');
     pickerEl.style.display='none';
     return;
   }
-  _wh1MapInstance = window.WH1Map.render(hostEl, onBinConfirmed);
+  _wh1MapInstance = mapMod.render(hostEl, onBinConfirmed);
 }
 function closeBinPicker(){
   // Cancel only valid in 'change' mode when a prior bin exists
@@ -1383,8 +1398,8 @@ function showBinBar(){
   var label = document.getElementById('binBarLabel');
   var btn   = document.getElementById('binBarChange');
   var bar   = document.getElementById('binBar');
-  if(String(selectedWh)==='1' && selectedBin){
-    // Active — WH1 with a chosen bin
+  if(whHasBinMap(selectedWh) && selectedBin){
+    // Active — warehouse with a chosen bin
     label.textContent = '📍 BIN: '+selectedBin;
     label.style.color = 'var(--warn)';
     btn.disabled = false;
@@ -1573,9 +1588,9 @@ function tryResume(){
     rcChangeZoneBtn.style.display = 'none';
     rcSwitchCounterBtn.style.display = '';
     rcSwitchWhLink.style.display = 'block';
-  } else if(String(s.selectedWh)==='1' && s.selectedBin){
-    // WH1-with-bin variant: ONLY Continue + Change zone. No Switch counter/warehouse.
-    var whLabel = 'WH1 — COLLINS · Bin: '+s.selectedBin;
+  } else if(whHasBinMap(s.selectedWh) && s.selectedBin){
+    // Warehouse-with-bin variant: ONLY Continue + Change zone. No Switch counter/warehouse.
+    var whLabel = 'WH'+s.selectedWh+' — '+(WH_LABELS[s.selectedWh]||'')+' · Bin: '+s.selectedBin;
     document.getElementById('rcCtx').innerHTML = 'Continuing as counter for <b style="color:var(--acc)">'+whLabel+'</b>';
     rcChangeZoneBtn.style.display = '';
     rcSwitchCounterBtn.style.display = 'none';
@@ -1704,8 +1719,8 @@ function applySwitchCounter(){
     document.getElementById('hsub').textContent = ' — '+n;
     restoreMyLog(selectedWh, n).then(function(restored){
       toast('Now counting as '+n + (restored>0 ? ' · '+restored+' recovered' : ''), 's');
-      // p4.0 — WH1: new counter must pick their own bin
-      if(String(selectedWh)==='1'){
+      // p4.0 — warehouses with a bin map: new counter must pick their own bin
+      if(whHasBinMap(selectedWh)){
         openBinPicker('init');
       }
     });
@@ -1830,9 +1845,11 @@ function renderSearchList(activeFilter){
   }
   filtered = deprioritize1EA(filtered);
   filtered.forEach(function(r){
+    var oh=Number(r.ON_HAND)||0;
     var d=document.createElement('div');
-    d.className='mi';
-    d.innerHTML='<div class="mil">'+r.PRODUCT+'<div class="mip">PAK: '+(r.PAK||'—')+' | BIN: '+r.BIN_LOC+'</div></div><div class="mid">'+r.DESCRIPTION+'</div>';
+    d.className='mi'+(oh>0?' mi--stock':'');
+    d.innerHTML='<div class="mil">'+r.PRODUCT+'<div class="mip">PAK: '+(r.PAK||'—')+' | BIN: '+r.BIN_LOC+'</div>'
+      +'<span class="air-oh '+(oh>0?'yes':'no')+'">'+(oh>0?'● ON HAND: '+oh:'○ none on hand')+'</span></div><div class="mid">'+r.DESCRIPTION+'</div>';
     d.onclick=function(){mlEl.style.display='none';showMatch(r);};
     mlEl.appendChild(d);
   });
@@ -2611,11 +2628,13 @@ function renderAiMatches(matches,activeFilter){
   filtered = deprioritize1EA(filtered);
   // Limit to 20 (was 15 — bump per Daniel; may go to 25 if needed)
   filtered.slice(0,20).forEach(function(p){
+    var oh=Number(p.ON_HAND)||0;
     var btn=document.createElement('button');
-    btn.className='air-match';
+    btn.className='air-match'+(oh>0?' air-match--stock':'');
     btn.innerHTML='<div class="air-prod">'+p.PRODUCT+'</div>'
       +'<div class="air-pak">PAK: '+(p.PAK||'—')+' | BIN: '+p.BIN_LOC+'</div>'
-      +'<div class="air-desc">'+p.DESCRIPTION+'</div>';
+      +'<div class="air-desc">'+p.DESCRIPTION+'</div>'
+      +'<span class="air-oh '+(oh>0?'yes':'no')+'">'+(oh>0?'● ON HAND: '+oh:'○ none on hand')+'</span>';
     btn.onclick=function(){
       document.getElementById('aiResult').style.display='none';
       showMatch(p);
@@ -2880,7 +2899,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v43';",
+    "const CACHE='scl-inv-v44';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
