@@ -1,5 +1,5 @@
 /* ============================================================
- * WH2 Richmond Bin Map — v2
+ * WH2 Richmond Bin Map — v3 (FLAT, no drawer)
  * ------------------------------------------------------------
  * SCL Inventory Count App — mirrors the wh1_map.js contract so it
  * is a drop-in for the bin picker.
@@ -13,12 +13,12 @@
  *   onConfirmCallback(binCode)       - also fires on Confirm
  *
  * DESIGN:
- *   - Most areas are directly tappable ("flat") bins.
- *   - The tight TOP STRIP (Pails / PKG-Equip) is grouped into two
- *     ZONES that open a bottom drawer with big buttons (like WH1),
- *     because the child boxes are too small to tap on a phone.
- *   - Duplicate-named areas are NUMBERED on the map (Drums 1..7,
- *     PKG 1..3, ...) so the tapped label == the recorded bin code.
+ *   - Every labelled box is a directly-tappable bin (no zones/drawer —
+ *     the layout fits at phone width without grouping).
+ *   - WH1 look: black background, selected bin highlights YELLOW.
+ *   - Duplicate-named areas are NUMBERED (Drums 1..7, PKG 1..3, ...)
+ *     so the tapped label == the recorded bin code.
+ *   - Pails / PKG-Equip frames are kept as non-interactive decoration.
  * ============================================================ */
 (function(){
 'use strict';
@@ -32,13 +32,22 @@ var COL = {
 var TXT = '#12303f';
 var VB_W = 1120, VB_H = 1440;
 
-// ---- DIRECT (flat) BIN BOXES ----
+// ---- BIN BOXES (all directly tappable) ----
 // {code, label, x,y,w,h, fill, sub?, hatch?}  label may contain \n for wrapping;
 // code is the single-line string sent to the app (== label without line breaks).
 var BINS = [
   {code:'Office',            label:'Office',                x:193,y:52,  w:135,h:158, fill:COL.grey},
   {code:'Extra Stocked Products', label:'Extra Stocked\nProducts', x:333,y:62, w:88, h:130, fill:COL.tan},
   {code:'PKG / Mobil',       label:'PKG /\nMobil',          x:426,y:62,  w:82, h:130,  fill:COL.purple},
+
+  // former "Pails" group — now direct bins
+  {code:'Pails Pack',        label:'Pails\nPack',           x:520,y:95,  w:80, h:95,   fill:COL.pink},
+  {code:'Pails / Legs',      label:'Pails /\nLegs',         x:604,y:95,  w:82, h:95,   fill:COL.pink},
+  {code:'Pails',             label:'Pails',                 x:690,y:95,  w:82, h:95,   fill:COL.pinkD},
+  // former "PKG / Equip" group — now direct bins
+  {code:'PKG / Honda',       label:'PKG /\nHonda',          x:792,y:95,  w:78, h:95,   fill:COL.purple},
+  {code:'Cases PKG',         label:'Cases\nPKG',            x:874,y:95,  w:78, h:95,   fill:COL.purple},
+  {code:'Equip',             label:'Equip',                 x:956,y:95,  w:74, h:95,   fill:COL.orange},
 
   {code:'PKG 1',             label:'PKG 1',                 x:193,y:215, w:98, h:70,   fill:COL.purple},
   {code:'Cases to Pull',     label:'Cases to Pull',         x:500,y:215, w:280,h:70,   fill:COL.pinkD},
@@ -78,19 +87,10 @@ var BINS = [
   {code:'Pails Equipment Storage', label:'Pails\nEquipment\nStorage', x:30,y:1130,w:120,h:100, fill:COL.orange}
 ];
 
-// ---- ZONES (top strip — open a drawer of big buttons) ----
-// frame = tappable area on the map; children = the actual bins.
-var ZONES = [
-  {code:'PAILS', label:'Pails', frame:{x:512,y:55,w:268,h:140}, stroke:'#c98bb0', children:[
-     {code:'Pails Pack',  label:'Pails\nPack', x:520,y:95,w:80,h:95, fill:COL.pink},
-     {code:'Pails / Legs',label:'Pails /\nLegs',x:604,y:95,w:82,h:95, fill:COL.pink},
-     {code:'Pails',       label:'Pails',       x:690,y:95,w:82,h:95, fill:COL.pinkD}
-  ]},
-  {code:'PKGEQUIP', label:'PKG / Equip', frame:{x:786,y:55,w:250,h:140}, stroke:'#d0a15f', children:[
-     {code:'PKG / Honda', label:'PKG /\nHonda', x:792,y:95,w:78,h:95, fill:COL.purple},
-     {code:'Cases PKG',   label:'Cases\nPKG',   x:874,y:95,w:78,h:95, fill:COL.purple},
-     {code:'Equip',       label:'Equip',        x:956,y:95,w:74,h:95, fill:COL.orange}
-  ]}
+// Non-interactive group frames (decoration only — the children above are the bins)
+var GROUPS = [
+  {label:'Pails',       x:512,y:55, w:268,h:140, stroke:'#c98bb0'},
+  {label:'PKG / Equip', x:786,y:55, w:250,h:140, stroke:'#d0a15f'}
 ];
 
 // Static text labels (rooms / doors)
@@ -111,28 +111,15 @@ var CSS = ''
 + '.wh2map-badge{font-size:10px;padding:3px 10px;border-radius:12px;background:#222;border:1px solid #333;color:#888}'
 + '.wh2map-badge.on{background:#0d9e6e18;border-color:#5DCAA5;color:#5DCAA5;font-weight:700}'
 + '.wh2map-hint{font-size:11px;color:#6b7494;margin:2px 0 8px}'
-+ '.wh2map-wrap{border-radius:8px;overflow:hidden;border:1px solid #333;background:#f4f6f8}'
++ '.wh2map-wrap{border-radius:8px;overflow:hidden;border:1px solid #333;background:#111}'
 + '.wh2map-wrap svg{display:block;width:100%;height:auto}'
-+ '.wh2map-bin,.wh2map-zone{cursor:pointer;-webkit-tap-highlight-color:transparent}'
++ '.wh2map-bin{cursor:pointer;-webkit-tap-highlight-color:transparent}'
 + '.wh2map-bin:active rect{opacity:.75}'
-+ '.wh2map-bin.sel>rect,[data-bin].sel{stroke:#0aa06e !important;stroke-width:6 !important}'
-+ '.wh2map-zone.sel>rect.zframe{stroke:#0aa06e;stroke-width:5}'
-+ '.wh2map-ztag{font-size:10px;font-weight:700;fill:#0a6e4c}'
++ '.wh2map-bin.sel>rect{fill:#FFE680 !important;stroke:#FFB800 !important;stroke-width:4 !important}'
 + '.wh2map-confirm{display:none;margin-top:8px;padding:10px 14px;border-radius:8px;background:#0d9e6e18;border:1px solid #5DCAA5;align-items:center;justify-content:space-between}'
 + '.wh2map-confirm.show{display:flex}'
 + '.wh2map-ctext{font-size:13px;font-weight:700;color:#5DCAA5}'
-+ '.wh2map-cbtn{padding:8px 18px;border-radius:14px;background:#5DCAA5;color:#000;border:none;font-size:13px;font-weight:700;cursor:pointer}'
-// drawer
-+ '.wh2map-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:none}'
-+ '.wh2map-ov.open{display:block}'
-+ '.wh2map-drawer{position:absolute;left:0;right:0;bottom:0;background:#141720;border-top:1px solid #333;border-radius:16px 16px 0 0;padding:14px 16px 22px;max-height:80vh;overflow:auto}'
-+ '.wh2map-grip{width:40px;height:4px;border-radius:2px;background:#3a4152;margin:0 auto 12px}'
-+ '.wh2map-dtitle{font-family:"Barlow",sans-serif;font-size:16px;font-weight:700;color:#e8ecf4;margin-bottom:2px}'
-+ '.wh2map-dsub{font-size:12px;color:#6b7494;margin-bottom:12px}'
-+ '.wh2map-dbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#1c2030;border:1px solid #252a3a;border-radius:10px;padding:14px;margin-bottom:8px;color:#e8ecf4;font-family:"Barlow",sans-serif;font-size:16px;font-weight:600;cursor:pointer}'
-+ '.wh2map-dbtn.sel{border-color:#5DCAA5;background:#0d9e6e18}'
-+ '.wh2map-sw{width:20px;height:20px;border-radius:5px;border:1px solid #5a6b78;flex:0 0 auto}'
-+ '.wh2map-dcancel{width:100%;margin-top:6px;background:transparent;border:1px solid #3a4152;color:#9aa3bd;border-radius:10px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:"Barlow",sans-serif}';
++ '.wh2map-cbtn{padding:8px 18px;border-radius:14px;background:#5DCAA5;color:#000;border:none;font-size:13px;font-weight:700;cursor:pointer}';
 
 function injectCSS(){
   if(document.getElementById('wh2map-css')) return;
@@ -166,39 +153,25 @@ function binMarkup(b){
     + boxText(b, cx, cy, fs) + '</g>';
 }
 
-function zoneMarkup(z){
-  var f=z.frame, s='<g class="wh2map-zone" data-zone="'+esc(z.code)+'" onclick="window.__wh2mapZone(\''+q(z.code)+'\')">';
-  // frame
-  s += '<rect class="zframe" x="'+f.x+'" y="'+f.y+'" width="'+f.w+'" height="'+f.h+'" rx="6" fill="none" stroke="'+z.stroke+'" stroke-width="1.6"/>';
-  s += '<text x="'+(f.x+f.w/2)+'" y="'+(f.y+18)+'" text-anchor="middle" font-size="14" font-weight="700" fill="'+TXT+'">'+esc(z.label)+'</text>';
-  // child visuals (non-interactive; the zone overlay handles taps)
-  z.children.forEach(function(c){
-    var cx=c.x+c.w/2, cy=c.y+c.h/2;
-    s += '<rect data-bin="'+esc(c.code)+'" x="'+c.x+'" y="'+c.y+'" width="'+c.w+'" height="'+c.h+'" rx="5" fill="'+c.fill+'" stroke="#5a6b78" stroke-width="1"/>';
-    s += '<text text-anchor="middle" font-weight="700" font-size="12" fill="'+TXT+'" pointer-events="none">'+tspans(c.label, cx, cy, 12)+'</text>';
-  });
-  // "tap" affordance
-  s += '<text class="wh2map-ztag" x="'+(f.x+f.w-6)+'" y="'+(f.y+f.h-6)+'" text-anchor="end" pointer-events="none">TAP \u25b8</text>';
-  // transparent overlay to capture taps across the whole zone
-  s += '<rect x="'+f.x+'" y="'+f.y+'" width="'+f.w+'" height="'+f.h+'" fill="#000" fill-opacity="0"/>';
-  s += '</g>';
-  return s;
+function groupMarkup(gp){
+  return '<rect x="'+gp.x+'" y="'+gp.y+'" width="'+gp.w+'" height="'+gp.h+'" rx="6" fill="none" stroke="'+gp.stroke+'" stroke-width="1.6" pointer-events="none"/>'
+    + '<text x="'+(gp.x+gp.w/2)+'" y="'+(gp.y+18)+'" text-anchor="middle" font-size="14" font-weight="700" fill="#d6deea" pointer-events="none">'+esc(gp.label)+'</text>';
 }
 
 function labelMarkup(l){
   var rot = l.rotate ? ' transform="rotate('+l.rotate+' '+l.x+' '+l.y+')"' : '';
-  return '<text x="'+l.x+'" y="'+l.y+'"'+rot+' text-anchor="'+(l.anchor||'start')+'" font-size="'+(l.size||14)+'" font-weight="700" fill="#33454f">'+esc(l.text)+'</text>';
+  return '<text x="'+l.x+'" y="'+l.y+'"'+rot+' text-anchor="'+(l.anchor||'start')+'" font-size="'+(l.size||14)+'" font-weight="700" fill="#d6deea">'+esc(l.text)+'</text>';
 }
 
 function buildSVG(){
-  var s = '<svg viewBox="0 0 '+VB_W+' '+VB_H+'" xmlns="http://www.w3.org/2000/svg">';
+  var s = '<svg viewBox="0 0 '+VB_W+' '+VB_H+'" xmlns="http://www.w3.org/2000/svg" style="display:block;background:#111">';
   s += '<defs><pattern id="wh2hatch" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">'
      + '<rect width="10" height="10" fill="'+COL.iso+'"/><line x1="0" y1="0" x2="0" y2="10" stroke="#8fb9cc" stroke-width="3"/></pattern></defs>';
-  s += '<rect x="185" y="45" width="855" height="1345" rx="4" fill="none" stroke="#111" stroke-width="5"/>';
+  s += '<rect x="185" y="45" width="855" height="1345" rx="4" fill="none" stroke="#cbd5e1" stroke-width="5"/>';
   s += '<line x1="185" y1="232" x2="167" y2="232" stroke="#3fa79f" stroke-width="4"/>';
   s += '<line x1="185" y1="320" x2="167" y2="320" stroke="#3fa79f" stroke-width="4"/>';
+  GROUPS.forEach(function(g){ s += groupMarkup(g); });
   BINS.forEach(function(b){ s += binMarkup(b); });
-  ZONES.forEach(function(z){ s += zoneMarkup(z); });
   LABELS.forEach(function(l){ s += labelMarkup(l); });
   s += '</svg>';
   return s;
@@ -226,84 +199,24 @@ MapInstance.prototype.build = function(){
     +     '<button class="wh2map-cbtn" onclick="window.__wh2mapConfirm()">Confirm \u2713</button>'
     +   '</div>'
     + '</div>';
-
-  // Drawer overlay (appended to body so it floats above app UI)
-  if(!document.getElementById('wh2map-ov')){
-    var ov=document.createElement('div'); ov.id='wh2map-ov'; ov.className='wh2map-ov';
-    ov.innerHTML = ''
-      + '<div class="wh2map-drawer">'
-      +   '<div class="wh2map-grip"></div>'
-      +   '<div class="wh2map-dtitle" data-role="dtitle">Select bin</div>'
-      +   '<div class="wh2map-dsub">Tap the exact bin you are counting in</div>'
-      +   '<div data-role="dcontent"></div>'
-      +   '<div class="wh2map-confirm" data-role="dconfirm" style="margin-top:12px">'
-      +     '<span class="wh2map-ctext" data-role="dconfirmText">\u2014</span>'
-      +     '<button class="wh2map-cbtn" onclick="window.__wh2mapConfirm()">Confirm \u2713</button>'
-      +   '</div>'
-      +   '<button class="wh2map-dcancel" onclick="window.__wh2mapCloseDrawer()">Cancel</button>'
-      + '</div>';
-    document.body.appendChild(ov);
-    ov.addEventListener('click', function(e){ if(e.target===ov) self.closeDrawer(); });
-  }
-  this.ov = document.getElementById('wh2map-ov');
-
-  window.__wh2mapPick        = function(b){ self.pick(b); };
-  window.__wh2mapZone        = function(z){ self.openZone(z); };
-  window.__wh2mapConfirm     = function(){ self.doConfirm(); };
-  window.__wh2mapCloseDrawer = function(){ self.closeDrawer(); };
+  window.__wh2mapPick    = function(b){ self.pick(b); };
+  window.__wh2mapConfirm = function(){  self.doConfirm(); };
 };
 
-MapInstance.prototype.openZone = function(zoneCode){
-  var z=null; ZONES.forEach(function(x){ if(x.code===zoneCode) z=x; });
-  if(!z) return;
-  var self=this;
-  var dc=this.ov.querySelector('[data-role="dcontent"]');
-  this.ov.querySelector('[data-role="dtitle"]').textContent = z.label;
-  dc.innerHTML='';
-  z.children.forEach(function(c){
-    var btn=document.createElement('button');
-    btn.className='wh2map-dbtn'; btn.setAttribute('data-dbin', c.code);
-    btn.innerHTML='<span class="wh2map-sw" style="background:'+c.fill+'"></span><span>'+esc(c.code)+'</span>';
-    btn.onclick=function(){ self.pick(c.code, true); };
-    dc.appendChild(btn);
-  });
-  // reset drawer confirm
-  this.ov.querySelector('[data-role="dconfirm"]').className='wh2map-confirm';
-  this.ov.classList.add('open');
-  document.body.style.overflow='hidden';
-};
-
-MapInstance.prototype.closeDrawer = function(){
-  if(this.ov){ this.ov.classList.remove('open'); document.body.style.overflow=''; }
-};
-
-MapInstance.prototype.pick = function(code, fromDrawer){
+MapInstance.prototype.pick = function(code){
   this.sel = code;
   var badge=this.root.querySelector('[data-role="badge"]');
   if(badge){ badge.textContent=code; badge.className='wh2map-badge on'; }
   this.root.querySelector('[data-role="confirmText"]').textContent='Counting in: '+code;
   this.root.querySelector('[data-role="confirm"]').className='wh2map-confirm show';
-  // clear prior map highlights
-  this.root.querySelectorAll('.sel').forEach(function(x){ x.classList.remove('sel'); });
-  // highlight the picked element on the map (direct bin group OR zone-child rect)
-  var el=this.root.querySelector('[data-bin="'+code.replace(/"/g,'\\"')+'"]');
-  if(el){ el.classList.add('sel'); var zg=el.closest && el.closest('.wh2map-zone'); if(zg) zg.classList.add('sel'); }
-  // drawer confirm + child button highlight
-  if(this.ov){
-    var dt=this.ov.querySelector('[data-role="dconfirmText"]');
-    var dcf=this.ov.querySelector('[data-role="dconfirm"]');
-    if(dt) dt.textContent='Counting in: '+code;
-    if(dcf) dcf.className='wh2map-confirm show';
-    this.ov.querySelectorAll('.wh2map-dbtn').forEach(function(b){
-      b.classList.toggle('sel', b.getAttribute('data-dbin')===code);
-    });
-  }
+  this.root.querySelectorAll('.wh2map-bin.sel').forEach(function(x){ x.classList.remove('sel'); });
+  var g=this.root.querySelector('.wh2map-bin[data-bin="'+code.replace(/"/g,'\\"')+'"]');
+  if(g) g.classList.add('sel');
   if(typeof window.SCL_BIN_SELECT==='function') window.SCL_BIN_SELECT(code);
 };
 
 MapInstance.prototype.doConfirm = function(){
   if(!this.sel) return;
-  this.closeDrawer();
   var bar=this.root.querySelector('[data-role="confirm"]');
   if(bar){ bar.style.background='#5DCAA530'; setTimeout(function(){ bar.style.background=''; },500); }
   if(typeof window.SCL_BIN_CONFIRM==='function') window.SCL_BIN_CONFIRM(this.sel);

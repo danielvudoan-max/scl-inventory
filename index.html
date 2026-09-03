@@ -78,9 +78,9 @@ header{background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 14
 /* MULTI */
 #ml{display:none;-webkit-flex-direction:column;flex-direction:column;gap:5px;margin-bottom:10px}
 .mi{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:9px 12px;cursor:pointer;display:-webkit-flex;display:flex;-webkit-justify-content:space-between;justify-content:space-between;-webkit-align-items:center;align-items:center;touch-action:manipulation}
-.mil{font-family:var(--mono);font-size:14px}
-.mip{color:var(--warn);font-size:13px;margin-top:2px}
-.mid{font-size:14px;color:var(--muted);max-width:60%;text-align:right}
+.mil{font-family:var(--mono);font-size:17px}
+.mip{color:var(--warn);font-size:15px;margin-top:2px}
+.mid{font-size:16px;color:var(--muted);max-width:60%;text-align:right}
 /* LOG */
 .lhdr{display:-webkit-flex;display:flex;-webkit-justify-content:space-between;justify-content:space-between;-webkit-align-items:center;align-items:center;padding:12px 14px 6px;border-top:1px solid var(--bdr)}
 .ltit{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
@@ -145,16 +145,20 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 .air-matches{display:-webkit-flex;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
 .air-match{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;text-align:left;width:100%;font-family:var(--sans)}
 .air-match:active{border-color:var(--acc2)}
-.air-prod{font-family:var(--mono);font-size:16px;color:var(--acc);font-weight:700;letter-spacing:.02em}
-.air-pak{font-size:14px;color:var(--warn);margin-top:3px;font-family:var(--mono)}
-.air-desc{font-size:15px;color:var(--muted);margin-top:4px;line-height:1.4}
-/* p6.1a — in-stock highlight: green accent when ON_HAND>0 so counters pick the code that actually has stock */
-.air-match--stock{border-left:4px solid var(--acc);background:rgba(0,212,170,.06)}
-.air-match--stock .air-desc{color:var(--acc)}
-.mi--stock{border-left:4px solid var(--acc);background:rgba(0,212,170,.06)}
-.mi--stock .mid{color:var(--acc)}
-.air-oh{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:13px;font-weight:700;padding:2px 9px;border-radius:12px}
-.air-oh.yes{background:rgba(0,212,170,.16);color:var(--acc)}
+.air-prod{font-family:var(--mono);font-size:19px;color:var(--acc);font-weight:700;letter-spacing:.02em}
+.air-pak{font-size:16px;color:var(--warn);margin-top:3px;font-family:var(--mono)}
+.air-desc{font-size:17px;color:var(--muted);margin-top:4px;line-height:1.4}
+/* p6.1a — in-stock highlight: whole cell a light green with dark text when ON_HAND>0 */
+.air-match--stock{background:#c4f1de;border-color:#57c79f}
+.air-match--stock .air-prod{color:#10231b}
+.air-match--stock .air-pak{color:#7a4d00}
+.air-match--stock .air-desc{color:#10231b}
+.mi--stock{background:#c4f1de;border-color:#57c79f}
+.mi--stock .mil{color:#10231b}
+.mi--stock .mip{color:#7a4d00}
+.mi--stock .mid{color:#10231b}
+.air-oh{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:15px;font-weight:700;padding:3px 10px;border-radius:12px}
+.air-oh.yes{background:#0aa06e;color:#fff}
 .air-oh.no{background:var(--surf2);color:var(--muted);font-weight:600}
 .air-conf{font-size:10px;color:var(--acc2);margin-top:4px;font-family:var(--mono)}
 .air-reasoning{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:10px;line-height:1.4;padding:8px;background:var(--bg);border-radius:6px}
@@ -326,7 +330,7 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <div id="binPicker" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9995;overflow-y:auto;-webkit-overflow-scrolling:touch">
   <div style="position:sticky;top:0;background:var(--surf);border-bottom:1px solid var(--bdr);padding:14px 16px;display:flex;-webkit-display:flex;align-items:center;-webkit-align-items:center;justify-content:space-between;-webkit-justify-content:space-between;z-index:10">
     <div>
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:2px">WH1 — COLLINS</div>
+      <div id="binPickerWhLabel" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:2px">WH1 — COLLINS</div>
       <div style="font-size:18px;font-weight:900;color:var(--acc);line-height:1.1">Pick your bin location</div>
     </div>
     <button id="binPickerClose" onclick="closeBinPicker()" style="display:none;background:transparent;color:var(--muted);border:1px solid var(--bdr);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;-webkit-appearance:none;touch-action:manipulation">Cancel</button>
@@ -1367,6 +1371,8 @@ function openBinPicker(mode){
     pickerEl.style.display='none';
     return;
   }
+  var whLbl=document.getElementById('binPickerWhLabel');
+  if(whLbl) whLbl.textContent='WH'+selectedWh+' — '+(WH_LABELS[selectedWh]||'');
   _wh1MapInstance = mapMod.render(hostEl, onBinConfirmed);
 }
 function closeBinPicker(){
@@ -1831,7 +1837,7 @@ function renderSearchList(activeFilter){
     filters.forEach(function(f){
       var btn=document.createElement('button');
       btn.textContent=f;
-      btn.style.cssText='padding:7px 14px;border-radius:20px;border:1px solid var(--bdr);background:'+(f===activeFilter?'var(--acc2)':'var(--surf2)')+';color:'+(f===activeFilter?'#fff':'var(--txt)')+';font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation';
+      btn.style.cssText='padding:9px 18px;border-radius:20px;border:1px solid var(--bdr);background:'+(f===activeFilter?'var(--acc2)':'var(--surf2)')+';color:'+(f===activeFilter?'#fff':'var(--txt)')+';font-size:16px;font-weight:600;cursor:pointer;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation';
       btn.onclick=function(){renderSearchList(f);};
       fbar.appendChild(btn);
     });
@@ -2614,7 +2620,7 @@ function renderAiMatches(matches,activeFilter){
   filters.forEach(function(f){
     var btn=document.createElement('button');
     btn.textContent=f;
-    btn.style.cssText='padding:7px 14px;border-radius:20px;border:1px solid var(--bdr);background:'+(f===activeFilter?'var(--acc2)':'var(--surf2)')+';color:'+(f===activeFilter?'#fff':'var(--txt)')+';font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation';
+    btn.style.cssText='padding:9px 18px;border-radius:20px;border:1px solid var(--bdr);background:'+(f===activeFilter?'var(--acc2)':'var(--surf2)')+';color:'+(f===activeFilter?'#fff':'var(--txt)')+';font-size:16px;font-weight:600;cursor:pointer;font-family:var(--sans);-webkit-appearance:none;touch-action:manipulation';
     btn.onclick=function(){renderAiMatches(matches,f);};
     fbar.appendChild(btn);
   });
