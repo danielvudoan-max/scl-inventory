@@ -498,9 +498,11 @@ td{padding:7px 8px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 <script src="wh2_map.js"></script>
 <!-- p6.1c — WH4 Lancaster Bin Map module; exposes window.WH4Map.render() -->
 <script src="wh4_map.js"></script>
+<!-- p6.1d — WH11 Vista Bin Map module; exposes window.WH11Map.render() -->
+<script src="wh11_map.js"></script>
 <script>
 // ── VERSION ───────────────────────────────────────────────────────────
-var APP_VERSION='p6.1c · 2026-10-26';
+var APP_VERSION='p6.1d · 2026-10-26';
 var SUBMIT_ENDPOINT='https://scl-api-proxy.danielvudoan.workers.dev/submit-count';
 var SUBMIT_TIMEOUT_MS=15000;
 
@@ -1285,7 +1287,7 @@ var _binPickerMode=''; // 'init' (first-time after confirmWh) or 'change' (mid-s
 // ── MODAL ─────────────────────────────────────────────────────────────
 var WH_LABELS={'1':'COLLINS','2':'RICHMOND','4':'LANCASTER','7':'SAN JOSE','9':'WATSONVILLE','11':'VISTA'};
 // p6.1a — Bin-map registry. Warehouses with a tappable bin map. Add '11':'WH11Map','4':'WH4Map' as those maps ship.
-var BIN_MAPS={'1':'WH1Map','2':'WH2Map','4':'WH4Map'};
+var BIN_MAPS={'1':'WH1Map','2':'WH2Map','4':'WH4Map','11':'WH11Map'};
 function mapForWh(wh){ var g=BIN_MAPS[String(wh)]; return (g&&window[g]&&window[g].render)?window[g]:null; }
 function whHasBinMap(wh){ return !!mapForWh(wh); }
 function startCounting(){
@@ -2908,7 +2910,7 @@ function doSubmitStep2(){
 // Network-first for HTML (so updates land), cache-first for everything else
 if('serviceWorker' in navigator){
   var swCode=[
-    "const CACHE='scl-inv-v46';",
+    "const CACHE='scl-inv-v47';",
     "self.addEventListener('install',e=>self.skipWaiting());",
     "self.addEventListener('activate',e=>{",
     "  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>clients.claim()));",
