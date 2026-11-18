@@ -1,5 +1,5 @@
 /* ============================================================
- * WH2 Richmond Bin Map — v3 (FLAT, no drawer)
+ * WH2 Richmond Bin Map — v4 (FLAT, no drawer)
  * ------------------------------------------------------------
  * SCL Inventory Count App — mirrors the wh1_map.js contract so it
  * is a drop-in for the bin picker.
@@ -16,9 +16,13 @@
  *   - Every labelled box is a directly-tappable bin (no zones/drawer —
  *     the layout fits at phone width without grouping).
  *   - WH1 look: black background, selected bin highlights YELLOW.
- *   - Duplicate-named areas are NUMBERED (Drums 1..7, PKG 1..3, ...)
+ *   - Duplicate-named areas are NUMBERED (Drums 1..8, Mix Rack 1..3, ...)
  *     so the tapped label == the recorded bin code.
- *   - Pails / PKG-Equip frames are kept as non-interactive decoration.
+ *
+ * v4 CHANGE (only the TOP section): the old Pail Room cluster (Extra
+ *   Stocked Products / PKG-Mobil / Pails / PKG-Equip / Cases to Pull /
+ *   PKG 1-3) is replaced by 3 Mix Racks + a vertical Drums + a single
+ *   PKG + 4 Extra PKG. Everything from the Drums column down is unchanged.
  * ============================================================ */
 (function(){
 'use strict';
@@ -27,36 +31,28 @@
 var COL = {
   grey:'#B4B4B4', greyLt:'#CFCFCF', tan:'#C9A87E', purple:'#D5C3E8',
   pink:'#F5C9DE', pinkD:'#F3B9D3', orange:'#F4C08A', teal:'#BBDEDA',
-  blue:'#8FC0E2', oil:'#CBE1EC', iso:'#CBE1EC'
+  blue:'#8FC0E2', oil:'#CBE1EC', iso:'#CBE1EC', pkg:'#D9E2E6'
 };
 var TXT = '#12303f';
 var VB_W = 1120, VB_H = 1440;
 
 // ---- BIN BOXES (all directly tappable) ----
-// {code, label, x,y,w,h, fill, sub?, hatch?}  label may contain \n for wrapping;
-// code is the single-line string sent to the app (== label without line breaks).
+// {code, label, x,y,w,h, fill, sub?, hatch?, rot?}  label may contain \n for wrapping;
+// code is the single-line string sent to the app.
 var BINS = [
-  {code:'Office',            label:'Office',                x:193,y:52,  w:135,h:158, fill:COL.grey},
-  {code:'Extra Stocked Products', label:'Extra Stocked\nProducts', x:333,y:62, w:88, h:130, fill:COL.tan},
-  {code:'PKG / Mobil',       label:'PKG /\nMobil',          x:426,y:62,  w:82, h:130,  fill:COL.purple},
+  // ===== TOP SECTION (v4 — new layout) =====
+  {code:'Office',      label:'Office',   x:193,y:52,  w:135,h:158, fill:COL.grey},
+  {code:'PKG',         label:'PKG',      x:193,y:215, w:140,h:70,  fill:COL.pkg},
+  {code:'Mix Rack 1',  label:'Mix Rack', x:430,y:55,  w:460,h:60,  fill:COL.blue},
+  {code:'Drums 8',     label:'Drums',    x:383,y:158, w:40, h:118, fill:COL.tan, rot:true},
+  {code:'Mix Rack 2',  label:'Mix Rack', x:435,y:158, w:385,h:55,  fill:COL.blue},
+  {code:'Mix Rack 3',  label:'Mix Rack', x:435,y:222, w:385,h:52,  fill:COL.blue},
+  {code:'Extra PKG 1', label:'Extra\nPKG', x:930,y:108,w:98, h:78, fill:COL.pkg},
+  {code:'Extra PKG 2', label:'Extra\nPKG', x:930,y:215,w:98, h:78, fill:COL.pkg},
+  {code:'Extra PKG 3', label:'Extra PKG', x:840,y:300,w:188,h:68,  fill:COL.pkg},
+  {code:'Extra PKG 4', label:'Extra PKG', x:840,y:390,w:188,h:68,  fill:COL.greyLt},
 
-  // former "Pails" group — now direct bins
-  {code:'Pails Pack',        label:'Pails\nPack',           x:520,y:95,  w:80, h:95,   fill:COL.pink},
-  {code:'Pails / Legs',      label:'Pails /\nLegs',         x:604,y:95,  w:82, h:95,   fill:COL.pink},
-  {code:'Pails',             label:'Pails',                 x:690,y:95,  w:82, h:95,   fill:COL.pinkD},
-  // former "PKG / Equip" group — now direct bins
-  {code:'PKG / Honda',       label:'PKG /\nHonda',          x:792,y:95,  w:78, h:95,   fill:COL.purple},
-  {code:'Cases PKG',         label:'Cases\nPKG',            x:874,y:95,  w:78, h:95,   fill:COL.purple},
-  {code:'Equip',             label:'Equip',                 x:956,y:95,  w:74, h:95,   fill:COL.orange},
-
-  {code:'PKG 1',             label:'PKG 1',                 x:193,y:215, w:98, h:70,   fill:COL.purple},
-  {code:'Cases to Pull',     label:'Cases to Pull',         x:500,y:215, w:280,h:70,   fill:COL.pinkD},
-  {code:'PKG 2',             label:'PKG 2',                 x:792,y:215, w:96, h:70,   fill:COL.purple},
-  {code:'PKG 3',             label:'PKG 3',                 x:940,y:215, w:96, h:70,   fill:COL.purple},
-
-  {code:'Extra PKG 1',       label:'Extra PKG 1',           x:850,y:300, w:186,h:68,   fill:COL.purple},
-  {code:'Extra PKG 2',       label:'Extra PKG 2',           x:850,y:380, w:186,h:68,   fill:COL.purple},
-
+  // ===== LEFT COLUMN (unchanged) =====
   {code:'Drums 1',           label:'Drums 1',               x:193,y:388, w:122,h:66,   fill:COL.tan},
   {code:'Drums 2',           label:'Drums 2',               x:193,y:470, w:122,h:66,   fill:COL.tan},
   {code:'Drums 3',           label:'Drums 3',               x:193,y:552, w:122,h:66,   fill:COL.tan},
@@ -65,21 +61,25 @@ var BINS = [
   {code:'TOTES 2',           label:'TOTES 2',               x:193,y:955, w:122,h:88,   fill:COL.blue},
   {code:'Mix Totes 1',       label:'MIX\nTOTES 1',          x:193,y:1055,w:122,h:88,   fill:COL.blue},
 
+  // ===== CENTER (unchanged) =====
   {code:'Drums 5',           label:'Drums 5',               x:433,y:413, w:186,h:44,   fill:COL.tan},
   {code:'Drums 6',           label:'Drums 6',               x:648,y:413, w:172,h:44,   fill:COL.tan},
   {code:'Rack 1',            label:'Rack 1',                x:433,y:468, w:88, h:610,  fill:COL.blue},
   {code:'Rack 2',            label:'Rack 2',                x:530,y:468, w:88, h:610,  fill:COL.blue},
-  {code:'Oil Totes Rack',    label:'Oil Totes\nRack',       x:648,y:468, w:172,h:438,  fill:COL.oil, sub:'\u2014 Low Volume \u2014'},
-  {code:'Oil Totes',         label:'Oil Totes',             x:848,y:468, w:188,h:610,  fill:COL.oil, sub:'\u2014 High Volume \u2014'},
+  {code:'Oil Totes Rack',    label:'Oil Totes\nRack',       x:648,y:468, w:172,h:438,  fill:COL.oil, sub:'— Low Volume —'},
+  {code:'Oil Totes',         label:'Oil Totes',             x:848,y:468, w:188,h:610,  fill:COL.oil, sub:'— High Volume —'},
   {code:'Drums 7',           label:'Drums 7',               x:433,y:1058,w:186,h:44,   fill:COL.tan},
   {code:'Mix Totes 2',       label:'Mix Totes 2',           x:648,y:912, w:172,h:128,  fill:COL.blue, sub:'Full Drum Storage'},
 
+  // ===== BOTTOM ROW (unchanged) =====
   {code:'Waste',             label:'Waste',                 x:193,y:1165,w:135,h:135,  fill:COL.grey},
   {code:'Bulk Off Load Area',label:'Bulk\nOff Load\nArea',  x:333,y:1165,w:142,h:135,  fill:COL.orange},
   {code:'Mix Totes 3',       label:'Mix\nTotes 3',          x:480,y:1165,w:140,h:135,  fill:COL.blue},
   {code:'Full Drum Storage', label:'Full\nDrum\nStorage',   x:625,y:1165,w:140,h:135,  fill:COL.tan},
   {code:'ISO Clean Corner',  label:'ISO Clean\nCorner',     x:770,y:1165,w:266,h:135,  fill:COL.iso, hatch:true},
 
+  // ===== EXTERIOR =====
+  {code:'Yard',              label:'Yard',                  x:30, y:55,  w:120,h:140,  fill:COL.grey},
   {code:'Storage Trailer 1', label:'Storage\nTrailer 1',    x:30, y:380, w:120,h:165,  fill:COL.teal},
   {code:'Storage Trailer 2', label:'Storage\nTrailer 2',    x:30, y:548, w:120,h:165,  fill:COL.teal},
   {code:'Empty Drums 1',     label:'Empty\nDrums 1',        x:30, y:920, w:120,h:95,   fill:COL.greyLt},
@@ -87,16 +87,11 @@ var BINS = [
   {code:'Pails Equipment Storage', label:'Pails\nEquipment\nStorage', x:30,y:1130,w:120,h:100, fill:COL.orange}
 ];
 
-// Non-interactive group frames (decoration only — the children above are the bins)
-var GROUPS = [
-  {label:'Pails',       x:512,y:55, w:268,h:140, stroke:'#c98bb0'},
-  {label:'PKG / Equip', x:786,y:55, w:250,h:140, stroke:'#d0a15f'}
-];
+// Non-interactive group frames — none in v4 (the former Pail Room groups are gone)
+var GROUPS = [];
 
-// Static text labels (rooms / doors)
+// Static text labels (doors only in v4)
 var LABELS = [
-  {text:'Pail Room', x:560, y:30,  size:22, anchor:'middle'},
-  {text:'Back Room', x:1058,y:250, size:20, anchor:'middle', rotate:90},
   {text:'Roller',    x:92,  y:224, size:15, anchor:'middle'},
   {text:'Truck Door',x:92,  y:242, size:15, anchor:'middle'},
   {text:'Truck',     x:92,  y:312, size:15, anchor:'middle'},
@@ -148,9 +143,12 @@ function boxText(b, cx, cy, fs){
 
 function binMarkup(b){
   var cx=b.x+b.w/2, cy=b.y+b.h/2, fs=b.w<90?13:15, fill=b.hatch?'url(#wh2hatch)':b.fill;
+  var txt = b.rot
+    ? '<text transform="rotate(-90 '+cx+' '+cy+')" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="'+fs+'" fill="'+TXT+'">'+esc(b.label)+'</text>'
+    : boxText(b, cx, cy, fs);
   return '<g class="wh2map-bin" data-bin="'+esc(b.code)+'" onclick="window.__wh2mapPick(\''+q(b.code)+'\')">'
     + '<rect x="'+b.x+'" y="'+b.y+'" width="'+b.w+'" height="'+b.h+'" rx="6" fill="'+fill+'" stroke="#5a6b78" stroke-width="1.2"/>'
-    + boxText(b, cx, cy, fs) + '</g>';
+    + txt + '</g>';
 }
 
 function groupMarkup(gp){
@@ -190,13 +188,13 @@ MapInstance.prototype.build = function(){
   var self=this;
   this.root.innerHTML = ''
     + '<div class="wh2map-root">'
-    +   '<div class="wh2map-hdr"><h3>WH2 \u00b7 RICHMOND</h3>'
+    +   '<div class="wh2map-hdr"><h3>WH2 · RICHMOND</h3>'
     +     '<span class="wh2map-badge" data-role="badge">No bin selected</span></div>'
     +   '<div class="wh2map-hint">Tap the area you are counting in, then Confirm.</div>'
     +   '<div class="wh2map-wrap">' + buildSVG() + '</div>'
     +   '<div class="wh2map-confirm" data-role="confirm">'
-    +     '<span class="wh2map-ctext" data-role="confirmText">\u2014</span>'
-    +     '<button class="wh2map-cbtn" onclick="window.__wh2mapConfirm()">Confirm \u2713</button>'
+    +     '<span class="wh2map-ctext" data-role="confirmText">—</span>'
+    +     '<button class="wh2map-cbtn" onclick="window.__wh2mapConfirm()">Confirm ✓</button>'
     +   '</div>'
     + '</div>';
   window.__wh2mapPick    = function(b){ self.pick(b); };
